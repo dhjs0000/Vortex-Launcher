@@ -1,0 +1,88 @@
+# 🚀 Vortex-Launcher
+
+<div align="center">
+
+![版本](https://img.shields.io/badge/版本-Alpha%200.0.1-blue)
+![Python版本](https://img.shields.io/badge/Python-3.12-green)
+![PyQt版本](https://img.shields.io/badge/PyQt-6.0.0+-orange)
+![许可证](https://img.shields.io/badge/许可证-GPL%20v3-blue)
+
+</div>
+
+<p align="center">
+Vortex-Launcher是一个简洁高效的Blender版本管理器，让您轻松管理和启动各个版本的Blender。
+</p>
+
+---
+
+## 📋 功能特性
+
+| 功能 | 描述 |
+|------|------|
+| ✅ 版本管理 | 在统一界面查看和管理所有Blender版本 |
+| ✅ 一键添加 | 轻松添加新的Blender安装路径 |
+| ✅ 快速删除 | 从列表中移除不需要的Blender版本 |
+| ✅ 完全卸载 | 彻底卸载选中的Blender版本 |
+| ✅ 快速启动 | 便捷启动所需的Blender版本 |
+
+---
+
+## 🔧 系统要求
+
+- 💻 Windows操作系统
+- 🐍 Python 3.12+
+- 🖼️ PyQt6
+
+---
+
+## 📥 安装步骤
+
+### 1. 确保已安装Python 3.12+
+
+```bash
+python -V
+```
+
+### 2. 安装必要依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 🚀 使用方法
+
+### 启动应用
+
+```bash
+python main.py
+```
+
+### 基本操作指南
+
+1. **添加Blender** - 点击"添加Blender地址"按钮，选择Blender安装目录
+2. **管理版本** - 在版本栏中查看和选择已添加的Blender版本
+3. **删除版本** - 选中列表中的Blender，点击"删除Blender地址"按钮
+4. **卸载版本** - 选中列表中的Blender，点击"卸载Blender"按钮
+5. **启动Blender** - 选中所需版本，点击"启动Blender"按钮
+
+---
+
+## 📝 开发信息
+
+- **版本**: Alpha 0.0.1
+- **开发者**: [dhjs0000](mailto:dhjsIIII@foxmail.com)
+- **创建日期**: 2025
+
+---
+
+## 📜 许可证
+
+本项目采用GNU通用公共许可证v3 (GPL-3.0)。这意味着任何使用或修改本代码的项目也必须以相同许可证开源。详情请参阅LICENSE文件。
+
+---
+
+<p align="center">
+Copyright © 2025 dhjs0000. All Rights Reserved.
+</p> 

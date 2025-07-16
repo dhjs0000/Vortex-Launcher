@@ -28,3 +28,7 @@ var/
 
 # 配置文件
 config.json 
+
+# 日志文件
+logs/
+*.log 

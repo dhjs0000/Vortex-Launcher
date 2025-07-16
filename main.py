@@ -71,13 +71,42 @@ def main():
     # 创建QApplication
     app = QApplication(sys.argv)
     app.setApplicationName("Vortex-Launcher")
-    app.setApplicationVersion("Beta 1.1.0")
+    app.setApplicationVersion("Beta 1.2.0")  # 更新版本号
+    
+    # 显示启动界面
+    from src.ui import LaunchingDialog
+    splash = LaunchingDialog()
+    splash.show()
+    
+    # 处理事件，确保界面显示
+    app.processEvents()
+    
+    # 更新启动进度
+    splash.set_progress(10, "正在加载配置...")
+    app.processEvents()
     
     # 创建Blender管理器
+    splash.set_progress(30, "正在初始化Blender管理器...")
+    app.processEvents()
     blender_manager = BlenderManager(config, log_manager.get_logger("BlenderManager", "vortex"))
+    
+    # 创建下载管理器
+    splash.set_progress(50, "正在初始化下载管理器...")
+    app.processEvents()
+    
+    # 准备创建主窗口
+    splash.set_progress(70, "正在初始化用户界面...")
+    app.processEvents()
     
     # 创建主窗口
     window = MainWindow(config, log_manager, blender_manager)
+    
+    # 完成启动
+    splash.set_progress(100, "启动完成!")
+    app.processEvents()
+    
+    # 关闭启动画面，显示主窗口
+    splash.accept()
     window.show()
     
     # 运行应用

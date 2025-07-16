@@ -43,7 +43,7 @@ def parse_arguments():
     parser.add_argument('--log-level', '-l', 
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         help='日志级别', default='INFO')
-    parser.add_argument('--version', '-v', action='version', version='Vortex-Launcher Beta 1.2.0')
+    parser.add_argument('--version', '-v', action='version', version='Vortex-Launcher Beta 1.2.1')
     
     return parser.parse_args()
 
@@ -71,7 +71,7 @@ def main():
     # 创建QApplication
     app = QApplication(sys.argv)
     app.setApplicationName("Vortex-Launcher")
-    app.setApplicationVersion("Beta 1.2.0")  # 更新版本号
+    app.setApplicationVersion("Beta 1.2.1")  # 更新版本号
     
     # 显示启动界面
     from src.ui import LaunchingDialog

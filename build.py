@@ -28,9 +28,7 @@ def package_app():
     "--workpath", os.path.join(output_dir, "temp"),
     "--specpath", output_dir,
     "--hidden-import", "requests",
-    "--hidden-import", "bs4",
-    "--collect-all", "PyQt6",
-    "--collect-all", "PyQt6-Qt6"
+    "--hidden-import", "bs4"
     ]
     
     # 执行打包命令

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![版本](https://img.shields.io/badge/版本-Beta%201.1.0-blue)
+![版本](https://img.shields.io/badge/版本-Beta%201.2.1-blue)
 ![Python版本](https://img.shields.io/badge/Python-3.12-green)
 ![PyQt版本](https://img.shields.io/badge/PyQt-6.0.0+-orange)
 ![许可证](https://img.shields.io/badge/许可证-GPL%20v3-blue)

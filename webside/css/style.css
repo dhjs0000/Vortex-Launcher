@@ -1,0 +1,270 @@
+/* 全局流式布局设置 */
+:root {
+    --container-width: 90%;
+    --primary-color: #4f46e5;
+    --secondary-color: #9333ea;
+    --accent-color: #14b8a6;
+    --text-color: #f3f4f6;
+    --background: #1e293b;
+    --section-bg: #334155;
+    --transition: all 0.4s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    font-size: calc(14px + 0.5vw); /* 响应式字体大小 */
+}
+
+body {
+    background: var(--background);
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* 导航栏优化 */
+nav {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+.nav-container {
+    width: var(--container-width);
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 30%;
+}
+
+.logo img {
+    height: 2.5rem;
+    width: auto;
+}
+
+.logo span {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+nav ul {
+    display: flex;
+    gap: 5%;
+    list-style: none;
+    width: 60%;
+    justify-content: flex-end;
+}
+
+nav a {
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: 1em;
+    transition: var(--transition);
+    position: relative;
+}
+
+nav a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -4px;
+    left: 50%;
+    background: var(--accent-color);
+    transition: var(--transition);
+    transform: translateX(-50%);
+}
+
+nav a:hover::after {
+    width: 100%;
+}
+
+/* 英雄区域优化 */
+.hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 15% 5%;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    animation: gradient-flow 8s infinite alternate;
+    transform-origin: center;
+    z-index: -1;
+}
+
+.hero-content {
+    width: var(--container-width);
+    margin: 0 auto;
+    text-align: center;
+}
+
+.hero h1 {
+    font-size: 5em;
+    margin-bottom: 0.5em;
+    line-height: 1.2;
+}
+
+.hero p {
+    font-size: 1.5em;
+    margin-bottom: 2em;
+    opacity: 0.9;
+}
+
+/* 按钮样式 */
+.cta-button {
+    display: inline-block;
+    padding: 1rem 2rem;
+    background: var(--accent-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.cta-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* 特性部分优化 */
+.features {
+    width: var(--container-width);
+    margin: 5% auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 3%;
+    padding: 5% 0;
+}
+
+.feature-card {
+    padding: 8%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 下载部分优化 */
+.download {
+    width: var(--container-width);
+    margin: 5% auto;
+    padding: 5% 0;
+}
+
+.download-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3%;
+    justify-content: center;
+}
+
+.download-card {
+    flex: 1 1 300px;
+    max-width: 400px;
+    margin: 2%;
+    padding: 5%;
+}
+
+/* 关于部分优化 */
+.about {
+    width: var(--container-width);
+    margin: 5% auto;
+    padding: 5% 0;
+}
+
+.about-content {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* 页脚优化 */
+footer {
+    width: 100%;
+    padding: 3% 0;
+}
+
+.footer-content {
+    width: var(--container-width);
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 响应式设计优化 */
+@media (max-width: 768px) {
+    :root {
+        --container-width: 95%;
+    }
+
+    .nav-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    nav ul {
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .logo {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .hero h1 {
+        font-size: 3em;
+    }
+
+    .hero p {
+        font-size: 1.2em;
+    }
+
+    .feature-card {
+        padding: 10%;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        gap: 2rem;
+        text-align: center;
+    }
+}
+
+@media (min-width: 2000px) {
+    :root {
+        --container-width: 80%;
+    }
+}

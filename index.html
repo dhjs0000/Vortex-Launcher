@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vortex-Launcher - Blender版本管理器</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- AOS -->
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="webside/images/logo.svg">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#9333ea',
+                        accent: '#14b8a6',
+                    }
+                }
+            },
+            darkMode: 'class'
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-gray-100" x-data="{ isOpen: false }">
+    <!-- 导航栏 -->
+    <nav class="fixed w-full z-50 bg-gray-900/95 backdrop-blur-lg border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="#" class="flex items-center space-x-3">
+                        <img src="webside/images/logo.svg" alt="Logo" class="h-8 w-8">
+                        <span class="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                            Vortex-Launcher
+                        </span>
+                    </a>
+                </div>
+                
+                <!-- 移动端菜单按钮 -->
+                <div class="flex items-center sm:hidden">
+                    <button @click="isOpen = !isOpen" class="text-gray-400 hover:text-white">
+                        <i class="fas" :class="isOpen ? 'fa-times' : 'fa-bars'"></i>
+                    </button>
+                </div>
+                
+                <!-- 桌面端导航链接 -->
+                <div class="hidden sm:flex sm:items-center sm:space-x-8">
+                    <a href="#features" class="text-gray-300 hover:text-white transition-colors">特性</a>
+                    <a href="#download" class="text-gray-300 hover:text-white transition-colors">下载</a>
+                    <a href="#about" class="text-gray-300 hover:text-white transition-colors">关于</a>
+                    <a href="https://github.com/dhjs0000/Vortex-Launcher" target="_blank" 
+                       class="text-gray-300 hover:text-white transition-colors">
+                        <i class="fab fa-github"></i>
+                        GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 移动端菜单 -->
+        <div x-show="isOpen" x-transition class="sm:hidden bg-gray-900/95 backdrop-blur-lg">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="#features" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">特性</a>
+                <a href="#download" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">下载</a>
+                <a href="#about" class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">关于</a>
+                <a href="https://github.com/dhjs0000/Vortex-Launcher" target="_blank" 
+                   class="block px-3 py-2 text-gray-300 hover:text-white transition-colors">
+                    <i class="fab fa-github"></i>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 英雄区域 -->
+    <header class="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary to-secondary opacity-50"></div>
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"30\" height=\"30\" viewBox=\"0 0 30 30\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M1.22676 0C1.91374 0 2.45351 0.539773 2.45351 1.22676C2.45351 1.91374 1.91374 2.45351 1.22676 2.45351C0.539773 2.45351 0 1.91374 0 1.22676C0 0.539773 0.539773 0 1.22676 0Z\" fill=\"rgba(255,255,255,0.07)\"%3E%3C/path%3E%3C/svg%3E')] opacity-10">
+        </div>
+        <div class="relative z-10 text-center px-4 sm:px-6 lg:px-8" data-aos="fade-up">
+            <h1 class="text-5xl sm:text-7xl font-bold mb-8 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                Vortex-Launcher
+            </h1>
+            <p class="text-xl sm:text-2xl mb-12 text-gray-300">
+                新一代 Blender 版本管理器
+            </p>
+            <a href="#download" 
+               class="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-accent hover:bg-accent/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-accent/50">
+                立即下载
+                <i class="fas fa-download ml-2"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- 特性区域 -->
+    <section id="features" class="py-24 bg-gray-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-bold text-center mb-16 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
+                data-aos="fade-up">
+                主要特性
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                <div class="p-6 rounded-xl bg-gray-800/50 backdrop-blur-lg border border-gray-700 transform hover:-translate-y-2 transition-all text-center"
+                     data-aos="fade-up" data-aos-delay="100">
+                    <i class="fas fa-sync-alt text-4xl text-accent mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-4">多版本管理</h3>
+                    <p class="text-gray-400">轻松管理多个 Blender 版本，随时切换使用</p>
+                </div>
+                <div class="p-6 rounded-xl bg-gray-800/50 backdrop-blur-lg border border-gray-700 transform hover:-translate-y-2 transition-all text-center"
+                     data-aos="fade-up" data-aos-delay="200">
+                    <i class="fas fa-download text-4xl text-accent mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-4">自动下载</h3>
+                    <p class="text-gray-400">一键下载并安装任意版本的 Blender</p>
+                </div>
+                <div class="p-6 rounded-xl bg-gray-800/50 backdrop-blur-lg border border-gray-700 transform hover:-translate-y-2 transition-all text-center"
+                     data-aos="fade-up" data-aos-delay="300">
+                    <i class="fas fa-file-alt text-4xl text-accent mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-4">日志管理</h3>
+                    <p class="text-gray-400">轻松读取Blender运行日志</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 下载区域 -->
+    <section id="download" class="py-24 bg-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-bold text-center mb-16 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
+                data-aos="fade-up">
+                下载
+            </h2>
+            <div class="max-w-lg mx-auto" data-aos="fade-up" data-aos-delay="100">
+                <div class="p-8 rounded-xl bg-gray-900/50 backdrop-blur-lg border border-gray-700">
+                    <div class="flex items-center justify-center mb-6">
+                        <i class="fab fa-windows text-6xl text-accent"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-center mb-4">Windows</h3>
+                    <p class="text-gray-400 text-center mb-6">适用于 Windows 10/11</p>
+                    <a href="https://github.com/dhjs0000/Vortex-Launcher/releases/latest"
+                       class="block w-full py-3 px-4 rounded-md bg-accent hover:bg-accent/90 text-white text-center font-medium transition-all transform hover:scale-105">
+                        <i class="fas fa-download mr-2"></i>
+                        下载最新版本
+                    </a>
+                    <p class="text-gray-500 text-center mt-4">Beta 1.2.0</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 关于区域 -->
+    <section id="about" class="py-24 bg-gray-900">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-4xl font-bold mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
+                data-aos="fade-up">
+                关于项目
+            </h2>
+            <p class="text-gray-300 mb-12 text-lg leading-relaxed" data-aos="fade-up" data-aos-delay="100">
+                Vortex-Launcher 是一个开源的 Blender 版本管理工具，旨在简化 Blender 多版本的管理和使用。
+                该项目使用 Python 和 Qt 开发，遵循 GPL-3.0 开源协议。
+            </p>
+            <div data-aos="fade-up" data-aos-delay="200">
+                <a href="https://github.com/dhjs0000/Vortex-Launcher"
+                   class="inline-flex items-center px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition-all">
+                    <i class="fab fa-github text-xl mr-2"></i>
+                    在 GitHub 上查看
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 border-t border-gray-700">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
+                <div class="text-gray-400 text-center sm:text-left">
+                    &copy; 2025 dhjs0000. 基于 GPL-3.0 协议开源。
+                </div>
+                <div class="flex justify-center sm:justify-end space-x-6">
+                    <a href="https://github.com/dhjs0000/Vortex-Launcher/issues" class="text-gray-400 hover:text-white transition-colors">
+                        问题反馈
+                    </a>
+                    <a href="https://github.com/dhjs0000/Vortex-Launcher/blob/main/LICENSE" class="text-gray-400 hover:text-white transition-colors">
+                        开源协议
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 初始化 AOS
+        AOS.init({
+            duration: 1000,
+            easing: 'ease-out-cubic',
+            once: true
+        });
+    </script>
+</body>
+</html>

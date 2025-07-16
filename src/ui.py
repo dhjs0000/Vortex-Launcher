@@ -41,7 +41,7 @@ class AboutDialog(QDialog):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("font-size: 18pt; font-weight: bold;")
         
-        version_label = QLabel("Beta 1.1.0")
+        version_label = QLabel("Beta 1.2.1")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("font-size: 12pt;")
         

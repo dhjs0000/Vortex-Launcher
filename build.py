@@ -6,33 +6,31 @@ import re
 
 def package_app():
     # 生成日期格式的构建目录
-    build_date = datetime.now().strftime("%y-%m-%d")
+    build_date = datetime.now().strftime("%y-%m-%d %H-%M-%S")
     output_dir = os.path.join("build", build_date)
     
     # 清理历史构建文件（保留其他日期目录）
     if os.path.exists("dist"):
         shutil.rmtree("dist")
-    if os.path.exists("build") and not os.path.exists(output_dir):
-        # 仅删除build目录下的非日期文件夹
-        for item in os.listdir("build"):
-            path = os.path.join("build", item)
-            if os.path.isdir(path) and not re.match(r"\d{2}-\d{2}-\d{2}", item):
-                shutil.rmtree(path)
     
     # 创建输出目录
     os.makedirs(output_dir, exist_ok=True)
 
     # 使用PyInstaller打包
     cmd = [
-        "pyinstaller",
-        "-D",  # 生成目录而不是单文件
-        "main.py",
-        "-n", "Vortex Luncher",
-        "--noconsole",
-        "--icon", "webside/images/logo.png",
-        "--distpath", output_dir,
-        "--workpath", os.path.join(output_dir, "temp"),
-        "--specpath", output_dir
+    "pyinstaller",
+    "-D",
+    "main.py",
+    "-n", "Vortex Luncher",
+    "--noconsole",
+    "--icon", "../../webside/images/logo.ico",
+    "--distpath", output_dir,
+    "--workpath", os.path.join(output_dir, "temp"),
+    "--specpath", output_dir,
+    "--hidden-import", "requests",
+    "--hidden-import", "bs4",
+    "--collect-all", "PyQt6",
+    "--collect-all", "PyQt6-Qt6"
     ]
     
     # 执行打包命令

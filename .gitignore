@@ -32,3 +32,11 @@ config.json
 # 日志文件
 logs/
 *.log 
+
+# Build临时文件
+
+*.spec
+
+# 其他文件
+
+测试报告.md

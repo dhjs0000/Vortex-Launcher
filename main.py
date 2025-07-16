@@ -43,7 +43,7 @@ def parse_arguments():
     parser.add_argument('--log-level', '-l', 
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         help='日志级别', default='INFO')
-    parser.add_argument('--version', '-v', action='version', version='Vortex-Launcher Beta 1.1.0')
+    parser.add_argument('--version', '-v', action='version', version='Vortex-Launcher Beta 1.2.0')
     
     return parser.parse_args()
 

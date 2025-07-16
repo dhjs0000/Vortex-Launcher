@@ -17,6 +17,31 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+## 测试用代码
+import os, sys
+from PyQt6.QtCore import QLibraryInfo, qVersion, PYQT_VERSION_STR
+import PyInstaller
+
+plugin_path = QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath)
+print("Qt plugin path:", plugin_path)
+
+# 如果打包后路径变了，手动加
+if hasattr(sys, "_MEIPASS"):
+    plugin_path = os.path.join(sys._MEIPASS, "PyQt6", "Qt6", "plugins")
+    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plugin_path
+    print("Fixed plugin path to:", plugin_path)
+try:
+    print("PyInstaller version:", PyInstaller.__version__)
+except ImportError:
+    print("PyInstaller not found")
+
+# Print PyQt6 version
+print("PyQt6 version:", qVersion())
+
+# Print PyQt6-Qt6 version
+print("PyQt6-Qt6 version:", PYQT_VERSION_STR)
+
+
 import os
 import sys
 import json

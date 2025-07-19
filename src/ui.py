@@ -32,7 +32,7 @@ class AboutDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("关于")
-        self.setFixedSize(400, 300)
+        self.setFixedSize(400, 600)
         
         layout = QVBoxLayout()
         
@@ -41,7 +41,7 @@ class AboutDialog(QDialog):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("font-size: 18pt; font-weight: bold;")
         
-        version_label = QLabel("Beta 1.2.1")
+        version_label = QLabel(src.__version__)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("font-size: 12pt;")
         
@@ -56,14 +56,24 @@ class AboutDialog(QDialog):
         copyright_label = QLabel("版权所有 © 2025 dhjs0000")
         copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
+        # PyQt6 版权信息
+        pyqt6_info = QLabel("PyQt6 版权所有 © 2016 Riverbank Computing Limited")
+        pyqt6_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         # GPL 许可证信息
         license_info = QTextEdit()
         license_info.setReadOnly(True)
         license_info.setText("本软件采用GNU通用公共许可证v3 (GPL-3.0)发布。\n\n"
                            "这意味着您可以自由地使用、修改和分发本软件，但您分发的任何衍生作品\n"
                            "也必须在GPL-3.0下发布并开放源代码。\n\n"
-                           "完整的许可证文本可在软件根目录的LICENSE文件中找到。")
-        
+                           "完整的许可证文本可在软件根目录的LICENSE文件中找到。"
+                           "而本软件基于PyQt6开发"
+                           "PyQt6使用GPL-3.0许可证发布，这意味着我必须提供PyQt6的版权信息且使用GPL-3.0协议。\n\n"
+                           "以下是PyQt6版权信息：\n\n"
+                           "Copyright (c) 2016 Riverbank Computing Limited.\n"
+                           "All rights reserved.\n"
+                           )
+
         # 添加所有部件到布局
         layout.addWidget(title_label)
         layout.addWidget(version_label)
@@ -72,6 +82,8 @@ class AboutDialog(QDialog):
         layout.addWidget(email_label)
         layout.addSpacing(10)
         layout.addWidget(copyright_label)
+        layout.addSpacing(20)
+        layout.addWidget(pyqt6_info)
         layout.addSpacing(20)
         layout.addWidget(license_info)
         

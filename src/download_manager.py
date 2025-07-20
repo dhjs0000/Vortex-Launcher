@@ -25,6 +25,77 @@ from PyQt6.QtCore import QObject, pyqtSignal, QThread, QMutex
 from bs4 import BeautifulSoup
 
 
+class VersionLoaderThread(QThread):
+    """版本加载线程，用于异步获取可用的Blender版本列表"""
+    
+    # 信号定义
+    version_loaded_signal = pyqtSignal(list)  # 版本列表加载完成信号(版本列表)
+    version_info_signal = pyqtSignal(object)  # 单个版本信息加载完成信号(版本信息)
+    progress_signal = pyqtSignal(str)  # 进度信息信号(消息)
+    error_signal = pyqtSignal(str)  # 错误信号(错误信息)
+    
+    def __init__(self, download_manager, json_file='blender_versions.json'):
+        super().__init__()
+        self.download_manager = download_manager
+        self.is_canceled = False
+        self.versions = []
+        self.json_file = json_file
+        
+    def run(self):
+        """线程执行函数"""
+        try:
+            self.progress_signal.emit("正在获取可用的Blender版本...")
+            
+            # 从JSON文件加载版本信息
+            self.progress_signal.emit("正在从JSON文件加载版本信息...")
+            versions = self.download_manager.load_versions_from_json(self.json_file)
+            
+            # 检查是否取消
+            if self.is_canceled:
+                return
+                
+            # 发送版本信息
+            for version_info in versions:
+                self.versions.append(version_info)
+                self.version_info_signal.emit(version_info)
+                
+                # 模拟加载延迟，使界面更流畅
+                import time
+                time.sleep(0.01)
+                
+                if self.is_canceled:
+                    return
+            
+            # 如果没有获取到任何版本，尝试使用缓存
+            if not self.versions and self.download_manager.version_cache:
+                self.progress_signal.emit("使用缓存的版本列表")
+                for version, info in self.download_manager.version_cache.items():
+                    self.versions.append(info)
+                    self.version_info_signal.emit(info)
+            
+            # 发送最终的版本列表
+            if self.versions:
+                self.progress_signal.emit(f"共找到 {len(self.versions)} 个可用版本")
+                self.version_loaded_signal.emit(self.versions)
+            else:
+                self.error_signal.emit("没有找到可用版本")
+        
+        except Exception as e:
+            self.error_signal.emit(f"获取Blender版本列表出错: {str(e)}")
+            
+            # 尝试使用缓存
+            if self.download_manager.version_cache:
+                self.progress_signal.emit("使用缓存的版本列表")
+                for version, info in self.download_manager.version_cache.items():
+                    self.versions.append(info)
+                    self.version_info_signal.emit(info)
+                self.version_loaded_signal.emit(self.versions)
+    
+    def cancel(self):
+        """取消加载"""
+        self.is_canceled = True
+
+
 class DownloadWorker(QThread):
     """下载工作线程"""
     
@@ -251,12 +322,13 @@ class ChunkDownloader(QObject):
 class BlenderVersionInfo:
     """Blender版本信息"""
     
-    def __init__(self, version, build_date=None, url=None, size=None, description=None):
+    def __init__(self, version, build_date=None, url=None, size=None, description=None, changes=None):
         self.version = version
         self.build_date = build_date
         self.url = url
         self.size = size
         self.description = description
+        self.changes = changes  # 版本更新说明
     
     def __str__(self):
         return f"Blender {self.version} ({self.build_date}) - {self.size}"
@@ -268,7 +340,8 @@ class BlenderVersionInfo:
             'build_date': self.build_date,
             'url': self.url,
             'size': self.size,
-            'description': self.description
+            'description': self.description,
+            'changes': self.changes
         }
     
     @classmethod
@@ -279,7 +352,8 @@ class BlenderVersionInfo:
             build_date=data.get('build_date'),
             url=data.get('url'),
             size=data.get('size'),
-            description=data.get('description')
+            description=data.get('description'),
+            changes=data.get('changes')
         )
 
 
@@ -358,12 +432,53 @@ class DownloadManager(QObject):
         except Exception as e:
             self.logger.error(f"保存版本缓存出错: {str(e)}")
     
+    def load_versions_from_json(self, json_file='blender_versions.json'):
+        """从JSON文件加载版本信息
+        
+        Args:
+            json_file: JSON文件路径
+            
+        Returns:
+            list: 版本信息列表
+        """
+        try:
+            self.logger.info(f"从JSON文件加载版本信息: {json_file}")
+            with open(json_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            versions = []
+            for version_data in data.get('versions', []):
+                # 替换下载URL中的{URL}为实际的镜像源地址
+                download_url = version_data.get('download_url', '')
+                if download_url and '{URL}' in download_url:
+                    download_url = download_url.replace('{URL}', self.mirror_url.rstrip('/'))
+                
+                version_info = BlenderVersionInfo(
+                    version=version_data.get('version'),
+                    build_date=version_data.get('build_date'),
+                    url=download_url,  # 使用替换后的URL
+                    size=version_data.get('size'),
+                    description=version_data.get('description'),
+                    changes=version_data.get('changes')
+                )
+                versions.append(version_info)
+                
+                # 更新缓存
+                self.version_cache[version_info.version] = version_info
+                
+            self.logger.info(f"从JSON文件加载了 {len(versions)} 个版本")
+            return versions
+            
+        except Exception as e:
+            self.logger.error(f"加载JSON版本信息出错: {str(e)}")
+            return []
+
     def _get_versions_from_direct_download(self):
         """直接从下载目录获取所有版本列表"""
         versions = []
         try:
             # 直接从下载目录获取版本列表
-            release_url = "https://download.blender.org/release/"
+            release_url = self.config.get('mirror_url', 'https://mirrors.aliyun.com/blender/release/')
             
             self.logger.info(f"正在直接访问Blender下载目录: {release_url}")
             
@@ -400,20 +515,75 @@ class DownloadManager(QObject):
                 reverse=True
             )
             
-            # 处理所有可用版本，但不获取下载链接
-            for version, dir_href in blender_versions:
+            # 处理所有的版本，获取子版本
+            for major_version, dir_href in blender_versions:
                 version_url = urljoin(release_url, dir_href)
-                self.logger.info(f"获取版本 {version} 信息")
+                self.logger.info(f"获取主版本 {major_version} 的子版本信息")
                 
-                # 创建版本信息对象，但不包含下载链接（将在用户点击下载时获取）
-                version_info = BlenderVersionInfo(
-                    version=version,
-                    url=version_url,  # 保存版本目录URL，而不是直接保存下载链接
-                    size="点击下载后获取",
-                    description=f"Blender {version} Windows 64位版本 (点击下载按钮获取详细信息)"
-                )
-                
-                versions.append(version_info)
+                try:
+                    # 获取版本目录内容
+                    version_resp = requests.get(
+                        version_url, 
+                        headers=headers,
+                        timeout=20, 
+                        proxies=self.proxies
+                    )
+                    version_resp.raise_for_status()
+                    
+                    version_soup = BeautifulSoup(version_resp.text, 'html.parser')
+                    file_links = version_soup.find_all('a')
+                    
+                    # 查找Windows版本文件
+                    subversions = []
+                    for link in file_links:
+                        href = link.get('href')
+                        if href and 'windows' in href.lower() and href.endswith('.zip'):
+                            # 提取完整版本号
+                            full_version_match = re.search(r'blender-(\d+\.\d+\.\d+)-', href)
+                            if full_version_match:
+                                full_version = full_version_match.group(1)
+                                file_url = urljoin(version_url, href)
+                                
+                                # 获取文件大小和日期
+                                size = "未知"
+                                date = "未知"
+                                parent_row = link.parent.parent
+                                if parent_row:
+                                    size_cell = parent_row.find_next('td', class_='size')
+                                    date_cell = parent_row.find_next('td', class_='date')
+                                    if size_cell:
+                                        size = size_cell.text.strip()
+                                    if date_cell:
+                                        date = date_cell.text.strip()
+                                
+                                subversions.append((full_version, file_url, size, date))
+                    
+                    # 按子版本号排序
+                    subversions.sort(
+                        key=lambda v: [int(n) if n.isdigit() else 0 for n in v[0].split('.')], 
+                        reverse=True
+                    )
+                    
+                    # 添加所有子版本
+                    for full_version, file_url, size, date in subversions:
+                        # 创建版本信息对象
+                        version_info = BlenderVersionInfo(
+                            version=full_version,
+                            url=file_url,
+                            size=size,
+                            build_date=date,
+                            description=f"Blender {full_version} Windows 64位版本"
+                        )
+                        
+                        versions.append(version_info)
+                        
+                        # 更新缓存
+                        self.version_cache[full_version] = version_info
+                    
+                    self.logger.info(f"主版本 {major_version} 下找到 {len(subversions)} 个子版本")
+                    
+                except Exception as e:
+                    self.logger.error(f"获取版本 {major_version} 的子版本信息出错: {str(e)}")
             
             self.logger.info(f"从官方下载目录获取到 {len(versions)} 个可用版本")
             return versions

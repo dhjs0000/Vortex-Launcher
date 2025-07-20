@@ -276,17 +276,26 @@ class SettingsDialog(QDialog):
         download_layout.addWidget(download_browse_button, 0, 2)
         
         # 第三方下载源设置
+        # 添加一个复选框，用于选择是否使用第三方下载源
         self.use_mirror = QCheckBox("使用第三方下载源")
+        # 从配置文件中获取是否使用第三方下载源，默认为True
         self.use_mirror.setChecked(config.get('use_mirror', True))
+        # 将复选框添加到布局中，位置为第1行第0列，占据1行3列
         download_layout.addWidget(self.use_mirror, 1, 0, 1, 3)
         
+        # 添加一个标签，用于显示下载源地址
         download_layout.addWidget(QLabel("下载源地址:"), 2, 0)
+        # 添加一个文本框，用于输入下载源地址
         self.mirror_url = QLineEdit()
-        self.mirror_url.setText(config.get('mirror_url', 'https://mirrors.aliyun.com/blender/'))
+        # 从配置文件中获取下载源地址，默认为https://mirrors.aliyun.com/blender/
+        self.mirror_url.setText(config.get('mirror_url', 'https://mirrors.aliyun.com/blender/release/'))
+        # 根据是否使用第三方下载源，设置文本框是否可用
         self.mirror_url.setEnabled(self.use_mirror.isChecked())
+        # 将文本框添加到布局中，位置为第2行第1列，占据1行2列
         download_layout.addWidget(self.mirror_url, 2, 1, 1, 2)
         
         # 连接信号
+        # 当use_mirror的toggled信号被触发时，连接到self.mirror_url.setEnabled函数
         self.use_mirror.toggled.connect(self.mirror_url.setEnabled)
         
         # 多线程下载设置
@@ -458,7 +467,9 @@ class DownloadDialog(QDialog):
         
         # 版本信息
         self.versions = []
+        self.version_map = {}  # 主版本号到子版本列表的映射
         self.current_download = None
+        self.version_loader = None
         
         self.init_ui()
         
@@ -471,17 +482,29 @@ class DownloadDialog(QDialog):
         version_layout.addWidget(QLabel("可用版本:"))
         
         self.version_table = QTableWidget()
-        self.version_table.setColumnCount(4)
-        self.version_table.setHorizontalHeaderLabels(["版本", "构建日期", "大小", "描述"])
+        self.version_table.setColumnCount(5)
+        self.version_table.setHorizontalHeaderLabels(["主版本", "子版本", "构建日期", "大小", "描述"])
         self.version_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.version_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.version_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.version_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        self.version_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.version_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         self.version_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.version_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.version_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         version_layout.addWidget(self.version_table)
+        
+        # 版本更新说明
+        changes_layout = QVBoxLayout()
+        changes_layout.addWidget(QLabel("版本更新说明:"))
+        
+        self.changes_text = QTextEdit()
+        self.changes_text.setReadOnly(True)
+        self.changes_text.setMinimumHeight(80)
+        changes_layout.addWidget(self.changes_text)
+        
+        version_layout.addLayout(changes_layout)
         
         # 刷新按钮
         refresh_button = QPushButton("刷新版本列表")
@@ -534,7 +557,7 @@ class DownloadDialog(QDialog):
         
         # 连接信号
         self.version_table.itemSelectionChanged.connect(self.on_selection_change)
-        self.download_manager.version_list_updated.connect(self.update_version_table)
+        self.version_table.cellClicked.connect(self.on_cell_clicked)
         self.download_manager.download_progress.connect(self.update_progress)
         self.download_manager.download_finished.connect(self.download_finished)
         self.download_manager.download_error.connect(self.download_error)
@@ -544,46 +567,286 @@ class DownloadDialog(QDialog):
         
     def refresh_versions(self):
         """刷新版本列表"""
-        from PyQt6.QtCore import QTimer
         # 禁用按钮
         self.download_button.setEnabled(False)
         self.install_button.setEnabled(False)
         
-        # 清空表格
+        # 清空表格和版本映射
         self.version_table.setRowCount(0)
+        self.versions = []
+        self.version_map = {}
+        
         self.download_label.setText("正在获取版本信息...")
+        self.progress_bar.setRange(0, 0)  # 显示忙碌状态
         
-        # 异步获取版本列表
-        QTimer.singleShot(100, self.download_manager.get_available_versions)
+        # 如果有正在运行的加载线程，取消它
+        if self.version_loader and self.version_loader.isRunning():
+            self.version_loader.cancel()
+            self.version_loader.wait()
         
+        # 创建并启动新的版本加载线程
+        from src.download_manager import VersionLoaderThread
+        self.version_loader = VersionLoaderThread(self.download_manager)
+        self.version_loader.version_loaded_signal.connect(self.update_version_table)
+        self.version_loader.version_info_signal.connect(self.add_version_info)
+        self.version_loader.progress_signal.connect(self.update_load_progress)
+        self.version_loader.error_signal.connect(self.update_load_error)
+        self.version_loader.start()
+    
+    def add_version_info(self, version_info):
+        """添加单个版本信息到表格"""
+        # 将版本添加到列表
+        self.versions.append(version_info)
+        
+        # 提取主版本号
+        parts = version_info.version.split('.')
+        if len(parts) >= 2:
+            major_version = f"{parts[0]}.{parts[1]}"
+        else:
+            major_version = version_info.version
+        
+        # 添加到版本映射
+        if major_version not in self.version_map:
+            self.version_map[major_version] = []
+        
+        self.version_map[major_version].append(version_info)
+        
+        # 更新表格
+        self._update_table_for_major_version(major_version)
+    
+    def update_load_progress(self, message):
+        """更新加载进度信息"""
+        self.download_label.setText(message)
+    
+    def update_load_error(self, error):
+        """更新加载错误信息"""
+        self.download_label.setText(f"错误: {error}")
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+    
     def update_version_table(self, versions):
-        """更新版本表格"""
-        self.versions = versions
-        self.version_table.setRowCount(0)
+        """更新版本表格 - 最终完成时调用"""
+        # 确保进度条恢复正常
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
         
+        # 更新最终信息
+        self.download_label.setText(f"共找到 {len(versions)} 个可用版本")
+        
+        # 确保所有主版本都已添加到表格
         for version_info in versions:
+            # 提取主版本号
+            parts = version_info.version.split('.')
+            if len(parts) >= 2:
+                major_version = f"{parts[0]}.{parts[1]}"
+            else:
+                major_version = version_info.version
+                
+            # 检查此主版本是否已在表格中
+            found = False
+            for row in range(self.version_table.rowCount()):
+                if self.version_table.item(row, 0).text() == major_version:
+                    found = True
+                    break
+            
+            # 如果未找到，添加此主版本
+            if not found:
+                self._update_table_for_major_version(major_version)
+    
+    def _update_table_for_major_version(self, major_version):
+        """更新指定主版本的表格行"""
+        if major_version not in self.version_map:
+            return
+            
+        versions_in_major = self.version_map[major_version]
+        
+        # 对同一主版本下的子版本排序
+        versions_in_major.sort(
+            key=lambda v: [int(n) if n.isdigit() else 0 for n in v.version.split('.')],
+            reverse=True
+        )
+        
+        # 获取该主版本下的最新版本
+        latest_version = versions_in_major[0]
+        
+        # 检查此主版本是否已在表格中
+        existing_row = -1
+        for row in range(self.version_table.rowCount()):
+            if self.version_table.item(row, 0).text() == major_version:
+                existing_row = row
+                break
+        
+        # 如果已存在，更新行；否则添加新行
+        if existing_row >= 0:
+            row = existing_row
+        else:
             row = self.version_table.rowCount()
             self.version_table.insertRow(row)
             
-            self.version_table.setItem(row, 0, QTableWidgetItem(version_info.version))
-            self.version_table.setItem(row, 1, QTableWidgetItem(version_info.build_date or ""))
-            self.version_table.setItem(row, 2, QTableWidgetItem(version_info.size or "未知"))
-            self.version_table.setItem(row, 3, QTableWidgetItem(version_info.description or ""))
+            # 设置主版本单元格
+            major_item = QTableWidgetItem(major_version)
+            self.version_table.setItem(row, 0, major_item)
             
-        self.download_label.setText(f"共找到 {len(versions)} 个可用版本")
+            # 创建下拉框
+            from PyQt6.QtWidgets import QComboBox
+            combo = QComboBox()
+            
+            # 添加所有子版本
+            for idx, v in enumerate(versions_in_major):
+                # 提取子版本号部分
+                if len(v.version.split('.')) > 2:
+                    # 如果是3段版本号 (如 "3.6.1")，显示第三段
+                    subversion = v.version.split('.')[-1]
+                    display_text = subversion
+                else:
+                    # 如果只有2段版本号 (如 "3.6")，显示为"最新"
+                    display_text = "最新"
+                
+                # 如果是该主版本的第一个子版本，默认选中
+                if idx == 0:
+                    display_text += " (最新)"
+                
+                combo.addItem(display_text, v.version)
+            
+            # 连接下拉框的信号
+            combo.currentIndexChanged.connect(lambda idx, r=row, c=combo: self.on_version_selected(r, c))
+            
+            self.version_table.setCellWidget(row, 1, combo)
         
+        # 更新其他单元格
+        self.version_table.setItem(row, 2, QTableWidgetItem(latest_version.build_date or ""))
+        self.version_table.setItem(row, 3, QTableWidgetItem(latest_version.size or "未知"))
+        self.version_table.setItem(row, 4, QTableWidgetItem(latest_version.description or ""))
+        
+        # 更新进度信息
+        self.download_label.setText(f"已加载 {len(self.versions)} 个版本")
+    
     def on_selection_change(self):
         """选择变化事件"""
         has_selection = len(self.version_table.selectedItems()) > 0
         self.download_button.setEnabled(has_selection)
         self.install_button.setEnabled(has_selection)
+    
+    def on_cell_clicked(self, row, column):
+        """单元格点击事件，用于更新显示的版本信息"""
+        if column == 1:
+            return  # 忽略下拉框列的点击，因为下拉框有自己的事件处理
+        
+        # 获取当前选中的主版本
+        major_version = self.version_table.item(row, 0).text()
+        
+        if major_version in self.version_map:
+            # 获取下拉框中选择的子版本
+            combo = self.version_table.cellWidget(row, 1)
+            selected_version = combo.currentData()
+            
+            # 查找对应的版本信息
+            for version_info in self.version_map[major_version]:
+                if version_info.version == selected_version:
+                    # 更新显示的版本信息
+                    self.version_table.setItem(row, 2, QTableWidgetItem(version_info.build_date or ""))
+                    self.version_table.setItem(row, 3, QTableWidgetItem(version_info.size or "未知"))
+                    self.version_table.setItem(row, 4, QTableWidgetItem(version_info.description or ""))
+                    
+                    # 更新版本更新说明
+                    self.update_changes_text(version_info)
+                    break
+    
+    def on_version_selected(self, row, combo):
+        """下拉框选择变化事件"""
+        # 获取当前选中的主版本
+        major_version = self.version_table.item(row, 0).text()
+        
+        if major_version in self.version_map:
+            # 获取选择的子版本
+            selected_version = combo.currentData()
+            
+            # 查找对应的版本信息
+            for version_info in self.version_map[major_version]:
+                if version_info.version == selected_version:
+                    # 更新显示的版本信息
+                    self.version_table.setItem(row, 2, QTableWidgetItem(version_info.build_date or ""))
+                    self.version_table.setItem(row, 3, QTableWidgetItem(version_info.size or "未知"))
+                    self.version_table.setItem(row, 4, QTableWidgetItem(version_info.description or ""))
+                    
+                    # 更新版本更新说明
+                    self.update_changes_text(version_info)
+                    break
+    
+    def update_changes_text(self, version_info):
+        """更新版本更新说明文本框"""
+        if version_info.changes:
+            # 查找前一个版本的信息，用于比较
+            prev_version = self.find_previous_version(version_info.version)
+            
+            # 构建更新说明文本
+            text = f"<h3>Blender {version_info.version} 更新说明</h3>"
+            text += f"<p>{version_info.changes}</p>"
+            
+            if prev_version:
+                text += f"<h4>相比 Blender {prev_version.version} 的变化</h4>"
+                text += f"<p>从 {prev_version.version} 升级到 {version_info.version}:</p>"
+                text += f"<ul>"
+                
+                # 分割更新说明为列表项
+                changes_list = version_info.changes.split("；")
+                for change in changes_list:
+                    if change.strip():
+                        text += f"<li>{change.strip()}</li>"
+                
+                text += f"</ul>"
+            
+            self.changes_text.setHtml(text)
+        else:
+            self.changes_text.setHtml("<p>没有可用的更新说明</p>")
+    
+    def find_previous_version(self, version):
+        """查找指定版本的前一个版本"""
+        # 将所有版本按版本号排序
+        all_versions = []
+        for versions in self.version_map.values():
+            all_versions.extend(versions)
+            
+        all_versions.sort(
+            key=lambda v: [int(n) if n.isdigit() else 0 for n in v.version.split('.')],
+            reverse=True
+        )
+        
+        # 查找当前版本的索引
+        current_index = -1
+        for i, v in enumerate(all_versions):
+            if v.version == version:
+                current_index = i
+                break
+        
+        # 如果找到当前版本，且不是最后一个版本，返回下一个版本
+        if current_index >= 0 and current_index < len(all_versions) - 1:
+            return all_versions[current_index + 1]
+        
+        return None
+        
+    def get_selected_version_info(self):
+        """获取当前选中的版本信息"""
+        selected_row = self.version_table.currentRow()
+        if selected_row >= 0:
+            # 获取主版本和选择的子版本
+            major_version = self.version_table.item(selected_row, 0).text()
+            combo = self.version_table.cellWidget(selected_row, 1)
+            
+            if combo and major_version in self.version_map:
+                selected_version = combo.currentData()
+                
+                # 查找对应的版本信息
+                for version_info in self.version_map[major_version]:
+                    if version_info.version == selected_version:
+                        return version_info
+        
+        return None
         
     def download_selected(self):
         """下载选中版本"""
-        selected_row = self.version_table.currentRow()
-        if selected_row >= 0 and selected_row < len(self.versions):
-            version_info = self.versions[selected_row]
-            
+        version_info = self.get_selected_version_info()
+        if version_info:
             # 开始下载
             self.current_download = self.download_manager.download_blender(version_info)
             
@@ -596,10 +859,8 @@ class DownloadDialog(QDialog):
     
     def download_and_install(self):
         """下载并安装所选版本"""
-        selected_row = self.version_table.currentRow()
-        if selected_row >= 0 and selected_row < len(self.versions):
-            version_info = self.versions[selected_row]
-            
+        version_info = self.get_selected_version_info()
+        if version_info:
             # 开始下载
             self.current_download = self.download_manager.download_blender(version_info)
             

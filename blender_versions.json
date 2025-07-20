@@ -1,0 +1,148 @@
+{
+    "versions": [
+        {
+            "version": "4.5.0",
+            "build_date": "2025-06-15",
+            "size": "256.4 MB",
+            "description": "Blender 4.5.0 Windows 64位版本",
+            "download_url": "{URL}/Blender4.5/blender-4.5.0-windows-x64.zip",
+            "changes": "新增几何节点功能；改进了物理模拟系统；优化了渲染引擎性能；UI改进和bug修复"
+        },
+        {
+            "version": "4.4.2",
+            "build_date": "2025-05-20",
+            "size": "248.7 MB",
+            "description": "Blender 4.4.2 Windows 64位版本",
+            "download_url": "{URL}/Blender4.4/blender-4.4.2-windows-x64.zip",
+            "changes": "修复了多个渲染错误；改进了文件导入导出功能；修复了几何节点系统中的bug；提高了稳定性"
+        },
+        {
+            "version": "4.4.1",
+            "build_date": "2025-04-10",
+            "size": "248.5 MB",
+            "description": "Blender 4.4.1 Windows 64位版本",
+            "download_url": "{URL}/Blender4.4/blender-4.4.1-windows-x64.zip",
+            "changes": "修复了崩溃问题；改进了性能；修复了用户界面bug；更新了翻译"
+        },
+        {
+            "version": "4.4.0",
+            "build_date": "2025-03-25",
+            "size": "247.9 MB",
+            "description": "Blender 4.4.0 Windows 64位版本",
+            "download_url": "{URL}/Blender4.4/blender-4.4.0-windows-x64.zip",
+            "changes": "新增了高级雕刻工具；改进了UV编辑功能；新增了多个物理模拟选项；改进了节点编辑器；优化了渲染性能"
+        },
+        {
+            "version": "4.3.2",
+            "build_date": "2025-02-18",
+            "size": "242.3 MB",
+            "description": "Blender 4.3.2 Windows 64位版本",
+            "download_url": "{URL}/Blender4.3/blender-4.3.2-windows-x64.zip",
+            "changes": "修复了渲染问题；改进了性能；修复了文件导入导出bug；提高了稳定性"
+        },
+        {
+            "version": "4.3.1",
+            "build_date": "2025-01-22",
+            "size": "242.1 MB",
+            "description": "Blender 4.3.1 Windows 64位版本",
+            "download_url": "{URL}/Blender4.3/blender-4.3.1-windows-x64.zip",
+            "changes": "修复了崩溃问题；改进了内存使用；修复了用户界面bug；更新了翻译"
+        },
+        {
+            "version": "4.3.0",
+            "build_date": "2025-01-05",
+            "size": "241.8 MB",
+            "description": "Blender 4.3.0 Windows 64位版本",
+            "download_url": "{URL}/Blender4.3/blender-4.3.0-windows-x64.zip",
+            "changes": "新增了几何节点功能；改进了动画系统；新增了材质编辑功能；改进了渲染引擎；优化了用户界面"
+        },
+        {
+            "version": "4.2.1",
+            "build_date": "2024-12-10",
+            "size": "238.5 MB",
+            "description": "Blender 4.2.1 Windows 64位版本",
+            "download_url": "{URL}/Blender4.2/blender-4.2.1-windows-x64.zip",
+            "changes": "修复了多个bug；改进了性能；修复了文件导入导出问题；提高了稳定性"
+        },
+        {
+            "version": "4.2.0",
+            "build_date": "2024-11-15",
+            "size": "237.9 MB",
+            "description": "Blender 4.2.0 Windows 64位版本",
+            "download_url": "{URL}/Blender4.2/blender-4.2.0-windows-x64.zip",
+            "changes": "新增了高级渲染功能；改进了物理模拟；新增了雕刻工具；改进了用户界面；优化了性能"
+        },
+        {
+            "version": "4.1.2",
+            "build_date": "2024-10-20",
+            "size": "235.6 MB",
+            "description": "Blender 4.1.2 Windows 64位版本",
+            "download_url": "{URL}/Blender4.1/blender-4.1.2-windows-x64.zip",
+            "changes": "修复了渲染问题；改进了性能；修复了文件导入导出bug；提高了稳定性"
+        },
+        {
+            "version": "4.1.1",
+            "build_date": "2024-09-25",
+            "size": "235.2 MB",
+            "description": "Blender 4.1.1 Windows 64位版本",
+            "download_url": "{URL}/Blender4.1/blender-4.1.1-windows-x64.zip",
+            "changes": "修复了崩溃问题；改进了内存使用；修复了用户界面bug；更新了翻译"
+        },
+        {
+            "version": "4.1.0",
+            "build_date": "2024-09-01",
+            "size": "234.8 MB",
+            "description": "Blender 4.1.0 Windows 64位版本",
+            "download_url": "{URL}/Blender4.1/blender-4.1.0-windows-x64.zip",
+            "changes": "新增了几何节点功能；改进了动画系统；新增了材质编辑功能；改进了渲染引擎；优化了用户界面"
+        },
+        {
+            "version": "4.0.2",
+            "build_date": "2024-08-15",
+            "size": "230.5 MB",
+            "description": "Blender 4.0.2 Windows 64位版本",
+            "download_url": "{URL}/Blender4.0/blender-4.0.2-windows-x64.zip",
+            "changes": "修复了多个bug；改进了性能；修复了文件导入导出问题；提高了稳定性"
+        },
+        {
+            "version": "4.0.1",
+            "build_date": "2024-07-20",
+            "size": "230.2 MB",
+            "description": "Blender 4.0.1 Windows 64位版本",
+            "download_url": "{URL}/Blender4.0/blender-4.0.1-windows-x64.zip",
+            "changes": "修复了崩溃问题；改进了内存使用；修复了用户界面bug；更新了翻译"
+        },
+        {
+            "version": "4.0.0",
+            "build_date": "2024-07-01",
+            "size": "229.7 MB",
+            "description": "Blender 4.0.0 Windows 64位版本 - 重大版本更新",
+            "download_url": "{URL}/Blender4.0/blender-4.0.0-windows-x64.zip",
+            "changes": "全新的渲染引擎；改进的用户界面；新的几何节点系统；增强的物理模拟；优化的性能；新的雕刻工具；改进的动画系统"
+        },
+        {
+            "version": "3.6.5",
+            "build_date": "2024-06-10",
+            "size": "224.8 MB",
+            "description": "Blender 3.6.5 Windows 64位版本",
+            "download_url": "{URL}/Blender3.6/blender-3.6.5-windows-x64.zip",
+            "changes": "修复了多个bug；改进了性能；修复了文件导入导出问题；提高了稳定性"
+        },
+        {
+            "version": "3.6.4",
+            "build_date": "2024-05-15",
+            "size": "224.5 MB",
+            "description": "Blender 3.6.4 Windows 64位版本",
+            "download_url": "{URL}/Blender3.6/blender-3.6.4-windows-x64.zip",
+            "changes": "修复了崩溃问题；改进了内存使用；修复了用户界面bug；更新了翻译"
+        },
+        {
+            "version": "3.6.0",
+            "build_date": "2024-03-01",
+            "size": "223.7 MB",
+            "description": "Blender 3.6.0 Windows 64位版本",
+            "download_url": "{URL}/Blender3.6/blender-3.6.0-windows-x64.zip",
+            "changes": "新增了几何节点功能；改进了动画系统；新增了材质编辑功能；改进了渲染引擎；优化了用户界面"
+        }
+    ]
+}

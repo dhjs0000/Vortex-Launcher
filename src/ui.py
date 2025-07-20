@@ -25,14 +25,16 @@ from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, QTimer, QDateTime
 from src.log import LogViewerDialog, LogSettingsDialog
 from src.blender_manager import BlenderManager
 from src.download_manager import DownloadManager, BlenderVersionInfo
-
+from src.backup_manager import BackupManagerDialog
+from src.backup import BackupManager
+import src
 
 class AboutDialog(QDialog):
     """关于对话框"""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("关于")
-        self.setFixedSize(400, 300)
+        self.setFixedSize(400, 600)
         
         layout = QVBoxLayout()
         
@@ -41,7 +43,7 @@ class AboutDialog(QDialog):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("font-size: 18pt; font-weight: bold;")
         
-        version_label = QLabel("Beta 1.2.1")
+        version_label = QLabel(src.__version__)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("font-size: 12pt;")
         
@@ -56,14 +58,30 @@ class AboutDialog(QDialog):
         copyright_label = QLabel("版权所有 © 2025 dhjs0000")
         copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
+        # PyQt6 版权信息
+        pyqt6_info = QLabel("PyQt6 版权所有 © 2016 Riverbank Computing Limited")
+        pyqt6_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         # GPL 许可证信息
         license_info = QTextEdit()
         license_info.setReadOnly(True)
         license_info.setText("本软件采用GNU通用公共许可证v3 (GPL-3.0)发布。\n\n"
                            "这意味着您可以自由地使用、修改和分发本软件，但您分发的任何衍生作品\n"
                            "也必须在GPL-3.0下发布并开放源代码。\n\n"
-                           "完整的许可证文本可在软件根目录的LICENSE文件中找到。")
-        
+                           "完整的许可证文本可在软件根目录的LICENSE文件中找到。"
+                           "而本软件基于PyQt6开发"
+                           "PyQt6使用GPL-3.0许可证发布，这意味着我必须提供PyQt6的版权信息且使用GPL-3.0协议。\n\n"
+                           "以下是PyQt6版权信息：\n\n"
+                           "Copyright (c) 2016 Riverbank Computing Limited.\n"
+                           "All rights reserved.\n"
+                            "以下是 requests 库的版权信息：\n\n"
+                            "Copyright 2018 Kenneth Reitz\n"
+                            "Licensed under the Apache License, Version 2.0\n\n"
+                            "以下是 beautifulsoup4 库的版权信息：\n\n"
+                            "Copyright (c) 2004-2022 Leonard Richardson\n"
+                            "Licensed under the MIT License\n"
+                           )
+
         # 添加所有部件到布局
         layout.addWidget(title_label)
         layout.addWidget(version_label)
@@ -72,6 +90,8 @@ class AboutDialog(QDialog):
         layout.addWidget(email_label)
         layout.addSpacing(10)
         layout.addWidget(copyright_label)
+        layout.addSpacing(20)
+        layout.addWidget(pyqt6_info)
         layout.addSpacing(20)
         layout.addWidget(license_info)
         
@@ -88,33 +108,65 @@ class VersionEditDialog(QDialog):
         super().__init__(parent)
         self.info = info
         self.setWindowTitle("编辑版本信息")
-        self.setFixedSize(400, 200)
+        self.resize(500, 400)
         
         layout = QVBoxLayout()
         
         # 版本信息
         form_layout = QGridLayout()
         
-        form_layout.addWidget(QLabel("路径:"), 0, 0)
+        # 当前路径（只读）
+        form_layout.addWidget(QLabel("当前路径:"), 0, 0)
         path_label = QLabel(info['path'])
         path_label.setWordWrap(True)
-        form_layout.addWidget(path_label, 0, 1)
+        form_layout.addWidget(path_label, 0, 1, 1, 2)
         
-        form_layout.addWidget(QLabel("当前版本:"), 1, 0)
-        current_version = QLabel(info['version'])
-        form_layout.addWidget(current_version, 1, 1)
+        # 新路径（可编辑）
+        form_layout.addWidget(QLabel("新路径:"), 1, 0)
+        self.path_edit = QLineEdit(info['path'])
+        form_layout.addWidget(self.path_edit, 1, 1)
         
-        form_layout.addWidget(QLabel("新版本:"), 2, 0)
+        # 浏览按钮
+        browse_button = QPushButton("浏览...")
+        browse_button.clicked.connect(self.browse_path)
+        form_layout.addWidget(browse_button, 1, 2)
+        
+        # 版本名称
+        form_layout.addWidget(QLabel("版本名称:"), 2, 0)
         self.version_edit = QLineEdit(info['version'])
-        form_layout.addWidget(self.version_edit, 2, 1)
+        form_layout.addWidget(self.version_edit, 2, 1, 1, 2)
+        
+        # 可执行文件
+        form_layout.addWidget(QLabel("可执行文件:"), 3, 0)
+        self.executable_edit = QLineEdit(info.get('executable', 'blender.exe'))
+        form_layout.addWidget(self.executable_edit, 3, 1, 1, 2)
+        
+        # 启动参数
+        form_layout.addWidget(QLabel("启动参数:"), 4, 0)
+        self.args_edit = QLineEdit(info.get('args', ''))
+        self.args_edit.setPlaceholderText("例如: -b --python myscript.py")
+        form_layout.addWidget(self.args_edit, 4, 1, 1, 2)
         
         layout.addLayout(form_layout)
         
         # 说明文本
-        note_label = QLabel("注意: 这里只修改显示的版本名称，不会影响实际的Blender版本。")
-        note_label.setWordWrap(True)
-        layout.addWidget(note_label)
+        note_layout = QVBoxLayout()
         
+        note_label = QLabel("注意事项:")
+        note_label.setStyleSheet("font-weight: bold;")
+        note_layout.addWidget(note_label)
+        
+        notes = [
+            "• 路径: Blender安装目录的完整路径",
+            "• 版本名称: 显示在列表中的名称，不影响实际版本",
+            "• 可执行文件: 相对于安装目录的可执行文件路径，通常为blender.exe",
+            "• 启动参数: 启动Blender时使用的命令行参数"
+        ]
+        
+        for note in notes:
+            note_layout.addWidget(QLabel(note))
+        
+        layout.addLayout(note_layout)
         layout.addStretch()
         
         # 按钮布局
@@ -133,6 +185,28 @@ class VersionEditDialog(QDialog):
         layout.addLayout(button_layout)
         
         self.setLayout(layout)
+    
+    def browse_path(self):
+        """浏览Blender路径"""
+        directory = QFileDialog.getExistingDirectory(
+            self, "选择Blender安装目录", self.path_edit.text(),
+            QFileDialog.Option.ShowDirsOnly
+        )
+        if directory:
+            self.path_edit.setText(directory)
+            
+            # 检查是否存在blender.exe
+            blender_exe = os.path.join(directory, "blender.exe")
+            if os.path.exists(blender_exe):
+                self.executable_edit.setText("blender.exe")
+            else:
+                # 尝试查找可执行文件
+                for root, dirs, files in os.walk(directory):
+                    for file in files:
+                        if file.lower() == "blender.exe":
+                            rel_path = os.path.relpath(os.path.join(root, file), directory)
+                            self.executable_edit.setText(rel_path)
+                            break
 
 
 class SettingsDialog(QDialog):
@@ -931,6 +1005,7 @@ class MainWindow(QMainWindow):
         self.config = config
         self.log_manager = log_manager
         self.blender_manager = blender_manager
+        self.BackupManager = BackupManager
         
         # 创建日志记录器
         self.logger = self.log_manager.get_logger("MainWindow", "vortex")
@@ -984,7 +1059,8 @@ class MainWindow(QMainWindow):
         self.uninstall_button = QPushButton("卸载Blender")
         self.launch_button = QPushButton("启动Blender")
         self.download_button = QPushButton("下载Blender")
-        
+        self.backup_button = QPushButton("备份Blender")
+        self.backup_button.clicked.connect(self.show_backup_manager)
         # 连接按钮信号
         self.add_button.clicked.connect(self.add_blender)
         self.delete_button.clicked.connect(self.delete_blender)
@@ -1079,9 +1155,16 @@ class MainWindow(QMainWindow):
         uninstall_blender_action.triggered.connect(self.uninstall_blender)
         launch_blender_action.triggered.connect(self.launch_blender)
         download_blender_action.triggered.connect(self.show_download_dialog)
-        edit_version_action.triggered.connect(self.edit_version)
         
         about_action.triggered.connect(self.show_about)
+
+        tools_menu = menubar.addMenu("工具")
+
+        backup_manager_action = QAction("备份管理器", self)
+
+        backup_manager_action.triggered.connect(self.show_backup_manager)
+
+        tools_menu.addAction(backup_manager_action)
 
     def show_settings(self):
         """显示设置对话框"""
@@ -1198,17 +1281,32 @@ class MainWindow(QMainWindow):
         if current_row >= 0:
             context_menu = QMenu(self)
             
+            # 创建操作
             launch_action = QAction("启动", self)
+            backup_action = QAction("备份", self)
+            restore_action = QAction("还原", self)
             delete_action = QAction("删除", self)
             uninstall_action = QAction("卸载", self)
             edit_action = QAction("编辑", self)
             
+            # 连接信号
             launch_action.triggered.connect(self.launch_blender)
+            backup_action.triggered.connect(self.show_backup_manager)
+            restore_action.triggered.connect(self.show_restore_dialog)
             delete_action.triggered.connect(self.delete_blender)
             uninstall_action.triggered.connect(self.uninstall_blender)
             edit_action.triggered.connect(self.edit_version)
             
+            # 添加到菜单
             context_menu.addAction(launch_action)
+            
+            # 添加备份相关操作
+            context_menu.addSeparator()
+            context_menu.addAction(backup_action)
+            context_menu.addAction(restore_action)
+            
+            # 添加编辑和删除操作
+            context_menu.addSeparator()
             context_menu.addAction(edit_action)
             context_menu.addAction(delete_action)
             context_menu.addAction(uninstall_action)
@@ -1348,20 +1446,93 @@ class MainWindow(QMainWindow):
                 # 创建编辑对话框
                 dialog = VersionEditDialog(info, self)
                 if dialog.exec():
-                    # 获取新的版本信息
+                    # 获取新的设置
                     new_version = dialog.version_edit.text()
+                    new_path = dialog.path_edit.text()
+                    new_executable = dialog.executable_edit.text()
+                    new_args = dialog.args_edit.text()
                     
                     # 更新版本信息
-                    self.blender_manager.update_version_info(current_row, new_version)
+                    success, message = self.blender_manager.update_version_info(
+                        current_row, 
+                        version=new_version, 
+                        path=new_path, 
+                        executable=new_executable, 
+                        args=new_args
+                    )
                     
-                    # 刷新表格
-                    self.update_version_table()
-                    
-                    self.logger.info(f"版本信息已更新: {info['path']} -> {new_version}")
+                    if success:
+                        # 刷新表格
+                        self.update_version_table()
+                        self.logger.info(f"版本信息已更新: {info['path']} -> {new_version}")
+                        QMessageBox.information(self, "成功", "版本信息已更新")
+                    else:
+                        self.logger.warning(f"更新版本信息失败: {message}")
+                        QMessageBox.warning(self, "更新失败", message)
         else:
             self.logger.warning("尝试编辑版本信息，但没有选择任何行")
             QMessageBox.information(self, "信息", "请先选择一个Blender版本")
     
+    def show_backup_manager(self):
+        """显示备份管理器对话框"""
+        current_row = self.version_table.currentRow()
+        self.logger.debug(f"当前选中的行: {current_row}")
+        if current_row < 0:
+            self.logger.warning("尝试显示备份管理器，但没有选择任何行")
+            QMessageBox.information(self, "信息", "请先选择一个Blender版本")
+            return
+        # 获取当前行的第一个单元格的文本，即Blender版本名称
+        name = self.version_table.item(current_row, 0).text()
+        # 获取当前行的第四个单元格的文本，即Blender版本路径
+        path = self.version_table.item(current_row, 1).text()
+        dialog = BackupManagerDialog(self, blenderName=name, blenderPath=path)
+        dialog.exec()
+        
+    def show_restore_dialog(self):
+        """显示还原对话框"""
+        current_row = self.version_table.currentRow()
+        self.logger.debug(f"当前选中的行: {current_row}")
+        if current_row < 0:
+            self.logger.warning("尝试显示还原对话框，但没有选择任何行")
+            QMessageBox.information(self, "信息", "请先选择一个Blender版本")
+            return
+            
+        # 获取当前行的第一个单元格的文本，即Blender版本名称
+        name = self.version_table.item(current_row, 0).text()
+        # 获取当前行的第四个单元格的文本，即Blender版本路径
+        path = self.version_table.item(current_row, 1).text()
+        
+        # 创建备份管理器实例
+        from src.backup import BackupManager
+        from src.backup_manager import BackupManagerDialog
+        
+        # 获取Blender版本号
+        version = None
+        for part in path.split(os.sep):
+            # 匹配版本号模式，如 3.6, 4.0 等
+            import re
+            version_match = re.search(r'(\d+\.\d+)', part)
+            if version_match:
+                version = version_match.group(1)
+                break
+        
+        # 设置备份路径
+        appdata_path = os.path.join(os.environ.get('APPDATA', ''), 'Blender Foundation', 'Blender')
+        if version:
+            backup_dir = os.path.join(appdata_path, version)
+        else:
+            backup_dir = os.path.join(appdata_path, 'Unknown')
+            
+        # 检查备份目录是否存在
+        if not os.path.exists(backup_dir) or not os.listdir(backup_dir):
+            self.logger.warning(f"备份目录不存在或为空: {backup_dir}")
+            QMessageBox.information(self, "信息", f"没有找到备份文件。\n备份路径: {backup_dir}")
+            return
+            
+        # 打开备份管理器对话框，直接显示备份列表
+        dialog = BackupManagerDialog(self, blenderName=name, blenderPath=path)
+        dialog.exec()
+
     def closeEvent(self, event):
         """关闭事件，保存配置"""
         self.logger.info("保存配置并退出")
@@ -1387,6 +1558,7 @@ if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
     from src.log import LogManager
     from src.blender_manager import BlenderManager
+    from src.backup import BackupManager
     
     # 创建应用
     app = QApplication(sys.argv)

@@ -55,7 +55,7 @@ from src.log import LogManager
 from src.blender_manager import BlenderManager
 from src.ui import MainWindow
 from src.utils import read_json_file, write_json_file, ensure_directory
-
+import src
 
 def parse_arguments():
     """解析命令行参数
@@ -68,7 +68,7 @@ def parse_arguments():
     parser.add_argument('--log-level', '-l', 
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         help='日志级别', default='INFO')
-    parser.add_argument('--version', '-v', action='version', version='Vortex-Launcher Beta 1.2.1')
+    parser.add_argument('--version', '-v', action='version', version=f'Vortex-Launcher {src.__version__}')
     
     return parser.parse_args()
 
@@ -96,7 +96,7 @@ def main():
     # 创建QApplication
     app = QApplication(sys.argv)
     app.setApplicationName("Vortex-Launcher")
-    app.setApplicationVersion("Beta 1.2.1")  # 更新版本号
+    app.setApplicationVersion(src.__version__)
     
     # 显示启动界面
     from src.ui import LaunchingDialog
@@ -122,7 +122,7 @@ def main():
     # 准备创建主窗口
     splash.set_progress(70, "正在初始化用户界面...")
     app.processEvents()
-    
+
     # 创建主窗口
     window = MainWindow(config, log_manager, blender_manager)
     

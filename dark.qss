@@ -1,0 +1,73 @@
+/* dark.qss —— 极简直角暗黑 */
+* {
+    font-family: "Inter", "Segoe UI";
+    font-size: 9pt;
+    outline: none;
+}
+
+QWidget {
+    background: #1e1e1e;
+    color: #ffffff;
+}
+
+QPushButton {
+    background: #2c2c2c;
+    border: 1px solid #3c3c3c;
+    border-radius: 0px;     /* 强制直角 */
+    padding: 6px 12px;
+    min-width: 80px;
+}
+QPushButton:hover {
+    background: #3c3c3c;
+}
+QPushButton:pressed {
+    background: #0e639c;
+    border-color: #0078d4;
+}
+
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+    background: #252526;
+    border: 1px solid #3c3c3c;
+    border-radius: 0px;
+    padding: 4px;
+}
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus {
+    border-color: #0078d4;
+}
+
+QGroupBox {
+    border: 1px solid #3c3c3c;
+    margin-top: 6px;
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 6px;
+    padding: 0 4px;
+}
+
+QTabWidget::pane {
+    border: 1px solid #3c3c3c;
+}
+QTabBar::tab {
+    background: #252526;
+    border: 1px solid #3c3c3c;
+    padding: 4px 10px;
+    margin-right: -1px;
+}
+QTabBar::tab:selected {
+    background: #0e639c;
+    border-color: #0078d4;
+}
+
+QScrollBar:vertical {
+    background: #252526;
+    width: 8px;
+}
+QScrollBar::handle:vertical {
+    background: #5a5a5a;
+    min-height: 20px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #0078d4;
+}

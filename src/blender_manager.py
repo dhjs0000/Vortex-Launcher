@@ -25,6 +25,7 @@ class BlenderManager:
         self.blender_paths = self.config.get('blender_paths', [])
         self.logger = logger or logging.getLogger("BlenderManager")
     
+    
     def get_blender_version(self, blender_path):
         """获取Blender版本信息
         
@@ -163,14 +164,34 @@ class BlenderManager:
         try:
             if 0 <= index < len(self.blender_paths):
                 path = self.blender_paths[index]
-                blender_exe = os.path.join(path, "blender.exe")
+                
+                # 获取自定义配置
+                custom_config = self.config.get('blender_custom_configs', {}).get(path, {})
+                custom_exe = custom_config.get('executable', "blender.exe")
+                custom_args = custom_config.get('args', "")
+                
+                # 构建可执行文件路径
+                blender_exe = os.path.join(path, custom_exe)
                 
                 if not os.path.exists(blender_exe):
-                    self.logger.warning(f"找不到blender.exe: {blender_exe}")
-                    return False, "找不到blender.exe"
+                    self.logger.warning(f"找不到可执行文件: {blender_exe}")
+                    return False, f"找不到可执行文件: {custom_exe}"
                 
                 # 准备命令行参数
                 cmd = [blender_exe]
+                
+                # 添加自定义参数（如果有）
+                if custom_args:
+                    # 分割参数字符串为列表
+                    import shlex
+                    try:
+                        custom_args_list = shlex.split(custom_args)
+                        cmd.extend(custom_args_list)
+                        self.logger.info(f"添加自定义参数: {custom_args_list}")
+                    except Exception as e:
+                        self.logger.warning(f"解析自定义参数时出错: {str(e)}")
+                
+                # 添加传入的附加参数（如果有）
                 if args:
                     cmd.extend(args)
                 
@@ -731,10 +752,19 @@ class BlenderManager:
             if 0 <= index < len(self.blender_paths):
                 path = self.blender_paths[index]
                 version = self.get_blender_version(path)
+                
+                # 获取自定义配置（如果存在）
+                custom_config = self.config.get('blender_custom_configs', {}).get(path, {})
+                custom_name = custom_config.get('name', os.path.basename(path))
+                custom_exe = custom_config.get('executable', "blender.exe")
+                custom_args = custom_config.get('args', "")
+                
                 return {
                     'path': path,
                     'version': version,
-                    'name': os.path.basename(path),
+                    'name': custom_name,
+                    'executable': custom_exe,
+                    'args': custom_args,
                     'exists': os.path.exists(path)
                 }
             else:
@@ -742,6 +772,66 @@ class BlenderManager:
         except Exception as e:
             self.logger.error(f"获取Blender信息时出错: {str(e)}")
             return None
+    
+    def update_version_info(self, index, version=None, path=None, executable=None, args=None):
+        """更新Blender版本信息
+        
+        Args:
+            index: Blender索引
+            version: 新的版本名称
+            path: 新的Blender路径
+            executable: 新的可执行文件名称
+            args: 新的启动参数
+            
+        Returns:
+            bool: 是否成功更新
+        """
+        try:
+            if 0 <= index < len(self.blender_paths):
+                current_path = self.blender_paths[index]
+                
+                # 如果提供了新路径，更新路径
+                if path and path != current_path:
+                    # 检查新路径是否有效
+                    if not os.path.exists(path):
+                        self.logger.warning(f"新路径不存在: {path}")
+                        return False, "新路径不存在"
+                    
+                    # 更新路径
+                    self.blender_paths[index] = path
+                    self.logger.info(f"更新Blender路径: {current_path} -> {path}")
+                    current_path = path
+                
+                # 确保自定义配置存在
+                if 'blender_custom_configs' not in self.config:
+                    self.config['blender_custom_configs'] = {}
+                
+                # 确保当前路径的配置存在
+                if current_path not in self.config['blender_custom_configs']:
+                    self.config['blender_custom_configs'][current_path] = {}
+                
+                # 更新版本名称
+                if version is not None:
+                    self.config['blender_custom_configs'][current_path]['name'] = version
+                    self.logger.info(f"更新Blender版本名称: {current_path} -> {version}")
+                
+                # 更新可执行文件
+                if executable is not None:
+                    self.config['blender_custom_configs'][current_path]['executable'] = executable
+                    self.logger.info(f"更新Blender可执行文件: {current_path} -> {executable}")
+                
+                # 更新启动参数
+                if args is not None:
+                    self.config['blender_custom_configs'][current_path]['args'] = args
+                    self.logger.info(f"更新Blender启动参数: {current_path} -> {args}")
+                
+                return True, "成功更新Blender信息"
+            else:
+                self.logger.warning(f"尝试更新无效的Blender索引: {index}")
+                return False, "无效的Blender索引"
+        except Exception as e:
+            self.logger.error(f"更新Blender信息时出错: {str(e)}")
+            return False, f"更新失败: {str(e)}"
     
     def update_config(self):
         """更新配置

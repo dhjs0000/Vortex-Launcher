@@ -6,6 +6,7 @@
 ![Python版本](https://img.shields.io/badge/Python-3.12-green)
 ![PyQt版本](https://img.shields.io/badge/PyQt-6.0.0+-orange)
 ![许可证](https://img.shields.io/badge/许可证-GPL%20v3-blue)
+![Stars](https://img.shields.io/github/stars/dhjs0000/Vortex-Launcher?style=social)
 
 </div>
 
@@ -13,6 +14,7 @@
 Vortex-Launcher是一个简洁高效的Blender版本管理器，让您轻松管理和启动各个版本的Blender。
 </p>
 
+[![Star History Chart](https://api.star-history.com/svg?repos=dhjs0000/Vortex-Launcher&type=Date)](https://www.star-history.com/#dhjs0000/Vortex-Launcher&Date)
 ---
 ## 🤝 一起做软件
 

@@ -16,7 +16,7 @@ Vortex-Launcher是一个简洁高效的Blender版本管理器，让您轻松管�
 ---
 ## 🤝 一起做软件
 
-即使你没有Python基础，也可以参与我们的开发，你可以注意到根目录有一个名为`blender-versions.json`的文件。这个文件是用来标注Blender的版本信息的，如果里面有任何不对，都可以提出issue，并自提交PR。
+即使你没有Python基础，也可以参与我们的开发，你可以注意到根目录有一个名为`blender-versions.json`的文件。这个文件是用来标注Blender的版本信息的，如果里面有任何不对，都可以Fork之后提交PR来修正。
 
 ## 📋 功能特性
 

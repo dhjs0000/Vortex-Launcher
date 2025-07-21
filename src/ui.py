@@ -11,13 +11,14 @@
 
 import os
 import sys
+import logging
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QFileDialog, QMessageBox,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QMenu, QMenuBar, QDialog, QCheckBox,
     QLineEdit, QGridLayout, QTabWidget, QTextEdit,
-    QSpinBox, QProgressBar
+    QSpinBox, QProgressBar, QGroupBox, QDialogButtonBox
 )
 from PyQt6.QtGui import QAction, QCursor, QIcon
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, QTimer, QDateTime
@@ -393,6 +394,205 @@ class SettingsDialog(QDialog):
         self.config['proxy'] = self.proxy.text()
         
         self.accept()
+
+
+class UsageStatsDialog(QDialog):
+    """使用时长统计对话框"""
+    
+    def __init__(self, usage_tracker, parent=None):
+        """初始化对话框
+        
+        Args:
+            usage_tracker: 使用时长记录器
+            parent: 父窗口
+        """
+        super().__init__(parent)
+        self.usage_tracker = usage_tracker
+        self.setWindowTitle("使用时长统计")
+        self.setMinimumSize(600, 400)
+        
+        # 调试日志
+        logging.info(f"初始化使用时长统计对话框")
+        logging.info(f"验证状态: {self.usage_tracker.verification_status}")
+        logging.info(f"总时长: {self.usage_tracker.get_total_time()}")
+        logging.info(f"今日时长: {self.usage_tracker.get_today_time()}")
+        logging.info(f"版本统计: {self.usage_tracker.usage_data.get('version_usage', {})}")
+        
+        # 主布局
+        main_layout = QHBoxLayout()
+        
+        # 左侧：统计信息
+        left_panel = QVBoxLayout()
+        
+        # 标题
+        title_label = QLabel("Blender 使用时长统计")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("font-size: 16pt; font-weight: bold; margin-bottom: 20px;")
+        left_panel.addWidget(title_label)
+        
+        # 统计信息卡片
+        stats_box = QGroupBox("使用统计")
+        stats_layout = QVBoxLayout()
+        
+        # 获取统计数据
+        total_time = self.usage_tracker.get_total_time()
+        today_time = self.usage_tracker.get_today_time()
+        
+        # 总使用时长
+        total_time_label = QLabel(f"累计总时长: {self.usage_tracker.format_time(total_time)}")
+        total_time_label.setStyleSheet("font-size: 12pt; margin: 10px 0;")
+        stats_layout.addWidget(total_time_label)
+        
+        # 今日使用时长
+        today_time_label = QLabel(f"今日使用时长: {self.usage_tracker.format_time(today_time)}")
+        today_time_label.setStyleSheet("font-size: 12pt; margin: 10px 0;")
+        stats_layout.addWidget(today_time_label)
+        
+        stats_box.setLayout(stats_layout)
+        left_panel.addWidget(stats_box)
+        
+        # 版本使用时长表格
+        version_box = QGroupBox("版本使用时长")
+        version_layout = QVBoxLayout()
+        
+        # 创建表格
+        self.version_table = QTableWidget()
+        self.version_table.setColumnCount(2)
+        self.version_table.setHorizontalHeaderLabels(["版本", "使用时长"])
+        self.version_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.version_table.verticalHeader().setVisible(False)
+        
+        # 从使用时长统计器直接获取版本使用时长
+        version_usage = self.usage_tracker.usage_data.get('version_usage', {})
+        
+        if not version_usage:
+            # 如果没有数据，显示提示
+            self.version_table.setRowCount(1)
+            no_data_item = QTableWidgetItem("没有使用记录")
+            self.version_table.setItem(0, 0, no_data_item)
+            self.version_table.setSpan(0, 0, 1, 2)  # 合并单元格
+            no_data_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        else:
+            # 按使用时长排序
+            sorted_versions = sorted(
+                version_usage.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )
+            
+            self.version_table.setRowCount(len(sorted_versions))
+            
+            for i, (version, time_value) in enumerate(sorted_versions):
+                # 版本
+                version_item = QTableWidgetItem(version)
+                self.version_table.setItem(i, 0, version_item)
+                
+                # 使用时长
+                time_item = QTableWidgetItem(self.usage_tracker.format_time(time_value))
+                time_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                self.version_table.setItem(i, 1, time_item)
+                
+                # 设置项目不可编辑
+                version_item.setFlags(version_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                time_item.setFlags(time_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        
+        version_layout.addWidget(self.version_table)
+        version_box.setLayout(version_layout)
+        left_panel.addWidget(version_box)
+        
+        # 添加左侧面板到主布局
+        left_widget = QWidget()
+        left_widget.setLayout(left_panel)
+        main_layout.addWidget(left_widget, 4)  # 比例4
+        
+        # 右侧：验证状态面板
+        right_panel = QVBoxLayout()
+        
+        # 验证状态框
+        verification_box = QGroupBox("数据验证")
+        verification_layout = QVBoxLayout()
+        
+        # 添加验证状态灯
+        self.verification_light = QLabel()
+        self.verification_light.setMinimumSize(100, 100)
+        self.verification_light.setMaximumSize(100, 100)
+        self.verification_light.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # 设置状态灯颜色
+        if self.usage_tracker.verification_status:
+            # 绿色灯
+            self.verification_light.setStyleSheet("""
+                background-color: #4CAF50;
+                border-radius: 50px;
+                border: 2px solid #2E7D32;
+            """)
+        else:
+            # 红色灯
+            self.verification_light.setStyleSheet("""
+                background-color: #F44336;
+                border-radius: 50px;
+                border: 2px solid #B71C1C;
+            """)
+        
+        verification_layout.addWidget(self.verification_light, 0, Qt.AlignmentFlag.AlignCenter)
+        
+        # 添加验证状态文本
+        verification_status_text = "数据完整性验证通过" if self.usage_tracker.verification_status else "数据完整性验证失败！"
+        verification_status_label = QLabel(verification_status_text)
+        verification_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        verification_status_label.setStyleSheet(
+            "font-size: 12pt; font-weight: bold; margin: 20px 0;" + 
+            ("color: #2E7D32;" if self.usage_tracker.verification_status else "color: #B71C1C;")
+        )
+        verification_layout.addWidget(verification_status_label)
+        
+        # 添加说明文本
+        if not self.usage_tracker.verification_status:
+            warning_text = QLabel("警告：使用时长统计数据可能已被篡改或损坏！")
+            warning_text.setWordWrap(True)
+            warning_text.setStyleSheet("color: #B71C1C; margin-top: 10px;")
+            warning_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            verification_layout.addWidget(warning_text)
+        
+        verification_layout.addStretch()
+        verification_box.setLayout(verification_layout)
+        
+        right_panel.addWidget(verification_box)
+        right_panel.addStretch()
+        
+        # 添加右侧面板到主布局
+        right_widget = QWidget()
+        right_widget.setLayout(right_panel)
+        main_layout.addWidget(right_widget, 1)  # 比例1
+        
+        # 底部按钮
+        button_layout = QHBoxLayout()
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        button_box.rejected.connect(self.reject)
+        button_layout.addStretch()
+        button_layout.addWidget(button_box)
+        
+        # 刷新按钮
+        refresh_button = QPushButton("刷新数据")
+        refresh_button.clicked.connect(self.refresh_data)
+        button_layout.insertWidget(0, refresh_button)
+        
+        # 总体布局
+        layout = QVBoxLayout()
+        layout.addLayout(main_layout, 1)
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+
+    def refresh_data(self):
+        """刷新使用时长数据"""
+        # 重新加载数据
+        self.usage_tracker.load_usage_data()
+        
+        # 重新打开对话框
+        new_dialog = UsageStatsDialog(self.usage_tracker, self.parent())
+        self.accept()
+        new_dialog.exec()
 
 
 class ConfigFileDialog(QDialog):
@@ -1227,6 +1427,15 @@ class BlenderLaunchDialog(QDialog):
         self.process = process
         self.status_label.setText("Blender已启动!")
         
+        # 确保使用时长跟踪被正确启动
+        try:
+            # 记录已启动的进程信息，用于后续检查
+            import logging
+            self.logger = logging.getLogger("BlenderLaunchDialog")
+            self.logger.info(f"Blender进程已启动，PID: {process.pid}")
+        except Exception as e:
+            print(f"记录Blender启动信息失败: {str(e)}")
+        
         # 延迟关闭
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(1000, self.accept)
@@ -1277,6 +1486,12 @@ class MainWindow(QMainWindow):
         self.logger.info("正在初始化主窗口...")
         self.initUI()
         self.logger.info("主窗口初始化完成")
+        
+        # 创建定时器，定期保存使用时长数据
+        self.usage_timer = QTimer()
+        self.usage_timer.timeout.connect(self.check_usage_data)
+        self.usage_timer.start(60000)  # 每分钟检查一次
+        self.logger.info("启动使用时长定时检查器")
 
     def initUI(self):
         """初始化用户界面"""
@@ -1395,13 +1610,6 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(download_blender_action)
         edit_menu.addAction(edit_version_action)
         
-        # 帮助菜单
-        help_menu = menubar.addMenu("帮助")
-        
-        about_action = QAction("关于", self)
-        
-        help_menu.addAction(about_action)
-        
         # 连接菜单动作
         settings_action.triggered.connect(self.show_settings)
         config_file_action.triggered.connect(self.show_config_file)
@@ -1422,10 +1630,20 @@ class MainWindow(QMainWindow):
         tools_menu = menubar.addMenu("工具")
 
         backup_manager_action = QAction("备份管理器", self)
+        usage_stats_action = QAction("使用时长统计", self)
 
         backup_manager_action.triggered.connect(self.show_backup_manager)
+        usage_stats_action.triggered.connect(self.show_usage_stats)
 
         tools_menu.addAction(backup_manager_action)
+        tools_menu.addAction(usage_stats_action)
+
+        # 帮助菜单
+        help_menu = menubar.addMenu("帮助")
+        
+        about_action = QAction("关于", self)
+        
+        help_menu.addAction(about_action)
 
     def show_settings(self):
         """显示设置对话框"""
@@ -1532,6 +1750,36 @@ class MainWindow(QMainWindow):
     def show_about(self):
         """显示关于对话框"""
         dialog = AboutDialog(self)
+        dialog.exec()
+        
+    def show_usage_stats(self):
+        """显示使用时长统计对话框"""
+        # 确保blender_manager存在
+        if not hasattr(self, 'blender_manager') or not self.blender_manager:
+            self.logger.error("BlenderManager不存在，无法显示使用时长统计")
+            QMessageBox.critical(self, "错误", "无法获取使用时长统计数据")
+            return
+            
+        # 获取使用时长追踪器
+        usage_tracker = self.blender_manager.usage_tracker
+        
+        # 强制重新加载数据
+        self.logger.info("强制重新加载使用时长数据")
+        usage_tracker.load_usage_data()
+        
+        # 打印当前使用统计信息
+        self.logger.info(f"打开使用时长统计对话框")
+        self.logger.info(f"- 总使用时长: {usage_tracker.format_time(usage_tracker.get_total_time())}")
+        self.logger.info(f"- 今日使用时长: {usage_tracker.format_time(usage_tracker.get_today_time())}")
+        self.logger.info(f"- 数据验证状态: {'通过' if usage_tracker.verification_status else '失败'}")
+        self.logger.info(f"- 数据文件路径: {usage_tracker.usage_file}")
+        
+        # 获取版本使用时长信息
+        version_usage = usage_tracker.usage_data.get('version_usage', {})
+        self.logger.info(f"- 版本使用时长: {version_usage}")
+        
+        # 显示对话框
+        dialog = UsageStatsDialog(usage_tracker, self)
         dialog.exec()
 
     def show_context_menu(self, position):
@@ -1794,11 +2042,31 @@ class MainWindow(QMainWindow):
         dialog = BackupManagerDialog(self, blenderName=name, blenderPath=path)
         dialog.exec()
 
+    def check_usage_data(self):
+        """定期检查和保存使用时长数据"""
+        try:
+            # 调用使用时长记录器的自动保存功能
+            self.blender_manager.usage_tracker.auto_save_timer(self.blender_manager)
+        except Exception as e:
+            self.logger.error(f"检查使用时长数据时出错: {str(e)}")
+    
     def closeEvent(self, event):
         """关闭事件，保存配置"""
         self.logger.info("保存配置并退出")
         # 确保blender_paths是最新的
         self.config['blender_paths'] = self.blender_manager.blender_paths
+        
+        # 停止定时器
+        if hasattr(self, 'usage_timer'):
+            self.usage_timer.stop()
+        
+        # 保存使用时长数据
+        try:
+            self.blender_manager.usage_tracker.check_active_sessions(self.blender_manager)
+            self.blender_manager.usage_tracker.save_usage_data()
+            self.logger.info("已保存使用时长统计数据")
+        except Exception as e:
+            self.logger.error(f"保存使用时长数据时出错: {str(e)}")
         
         # 保存配置
         import json

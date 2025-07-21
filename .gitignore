@@ -21,6 +21,7 @@ var/
 *.egg
 
 test*.py
+
 # IDE 文件
 .idea/
 .vscode/
@@ -29,6 +30,7 @@ test*.py
 
 # 配置文件
 config.json 
+data/
 
 # 日志文件
 logs/

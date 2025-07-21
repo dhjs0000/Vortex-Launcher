@@ -70,6 +70,35 @@ def parse_arguments():
                         help='日志级别', default='INFO')
     parser.add_argument('--version', '-v', action='version', version=f'Vortex-Launcher {src.__version__}')
     
+    # CLI 模式相关参数
+    parser.add_argument('--cli', action='store_true', help='以命令行模式运行，不启动图形界面')
+    
+    # CLI 子命令解析器
+    subparsers = parser.add_subparsers(dest='command', help='CLI命令')
+    
+    # list 命令 - 列出已安装的Blender版本
+    list_parser = subparsers.add_parser('list', help='列出已安装的Blender版本')
+    
+    # run 命令 - 启动指定的Blender版本
+    run_parser = subparsers.add_parser('run', help='启动指定的Blender版本')
+    run_parser.add_argument('index', type=int, help='Blender版本索引（从0开始）')
+    run_parser.add_argument('--args', help='传递给Blender的额外参数')
+    
+    # list-available 命令 - 列出可下载的Blender版本
+    list_available_parser = subparsers.add_parser('list-available', help='列出可下载的Blender版本')
+    
+    # download 命令 - 下载指定的Blender版本
+    download_parser = subparsers.add_parser('download', help='下载指定的Blender版本')
+    download_parser.add_argument('version', help='要下载的Blender版本号')
+    
+    # add 命令 - 添加本地Blender路径
+    add_parser = subparsers.add_parser('add', help='添加本地Blender路径')
+    add_parser.add_argument('path', help='Blender安装路径')
+    
+    # remove 命令 - 移除已添加的Blender
+    remove_parser = subparsers.add_parser('remove', help='移除已添加的Blender')
+    remove_parser.add_argument('index', type=int, help='要移除的Blender索引（从0开始）')
+    
     return parser.parse_args()
 
 
@@ -93,59 +122,101 @@ def main():
     logger = log_manager.get_logger("VortexLauncher", "vortex")
     logger.info("Vortex-Launcher 启动")
     
-    # 创建QApplication
-    app = QApplication(sys.argv)
-    app.setApplicationName("Vortex-Launcher")
-    app.setApplicationVersion(src.__version__)
+    # 命令行模式
+    if args.cli:
+        logger.info("以命令行模式运行")
+        
+        # 如果没有指定命令，显示帮助
+        if not args.command:
+            print("错误: 请指定要执行的命令。使用 --help 查看帮助。")
+            return 1
+        
+        # 导入CLI模块并执行命令
+        from src.cli import CLI
+        cli = CLI(config, log_manager)
+        
+        try:
+            exit_code = cli.execute(args)
+        except Exception as e:
+            logger.error(f"执行命令时出错: {str(e)}")
+            print(f"错误: {str(e)}")
+            exit_code = 1
+        
+        # 保存配置
+        config['blender_paths'] = cli.blender_manager.blender_paths
+        write_json_file(args.config, config)
+        
+        # 保存使用时长数据
+        logger.info("保存使用时长统计数据")
+        cli.blender_manager.usage_tracker.save_usage_data()
+        
+        # 压缩旧日志文件
+        log_manager.compress_old_logs()
+        
+        logger.info(f"Vortex-Launcher CLI 退出，退出码: {exit_code}")
+        return exit_code
     
-    # 显示启动界面
-    from src.ui import LaunchingDialog
-    splash = LaunchingDialog()
-    splash.show()
-    
-    # 处理事件，确保界面显示
-    app.processEvents()
-    
-    # 更新启动进度
-    splash.set_progress(10, "正在加载配置...")
-    app.processEvents()
-    
-    # 创建Blender管理器
-    splash.set_progress(30, "正在初始化Blender管理器...")
-    app.processEvents()
-    blender_manager = BlenderManager(config, log_manager.get_logger("BlenderManager", "vortex"))
-    
-    # 创建下载管理器
-    splash.set_progress(50, "正在初始化下载管理器...")
-    app.processEvents()
-    
-    # 准备创建主窗口
-    splash.set_progress(70, "正在初始化用户界面...")
-    app.processEvents()
+    # 图形界面模式
+    else:
+        logger.info("以图形界面模式运行")
+        
+        # 创建QApplication
+        app = QApplication(sys.argv)
+        app.setApplicationName("Vortex-Launcher")
+        app.setApplicationVersion(src.__version__)
+        
+        # 显示启动界面
+        from src.ui import LaunchingDialog
+        splash = LaunchingDialog()
+        splash.show()
+        
+        # 处理事件，确保界面显示
+        app.processEvents()
+        
+        # 更新启动进度
+        splash.set_progress(10, "正在加载配置...")
+        app.processEvents()
+        
+        # 创建Blender管理器
+        splash.set_progress(30, "正在初始化Blender管理器...")
+        app.processEvents()
+        blender_manager = BlenderManager(config, log_manager.get_logger("BlenderManager", "vortex"))
+        
+        # 创建下载管理器
+        splash.set_progress(50, "正在初始化下载管理器...")
+        app.processEvents()
+        
+        # 准备创建主窗口
+        splash.set_progress(70, "正在初始化用户界面...")
+        app.processEvents()
 
-    # 创建主窗口
-    window = MainWindow(config, log_manager, blender_manager)
-    
-    # 完成启动
-    splash.set_progress(100, "启动完成!")
-    app.processEvents()
-    
-    # 关闭启动画面，显示主窗口
-    splash.accept()
-    window.show()
-    
-    # 运行应用
-    exit_code = app.exec()
-    
-    # 保存配置
-    config['blender_paths'] = blender_manager.blender_paths
-    write_json_file(args.config, config)
-    
-    # 压缩旧日志文件
-    log_manager.compress_old_logs()
-    
-    logger.info(f"Vortex-Launcher 退出，退出码: {exit_code}")
-    return exit_code
+        # 创建主窗口
+        window = MainWindow(config, log_manager, blender_manager)
+        
+        # 完成启动
+        splash.set_progress(100, "启动完成!")
+        app.processEvents()
+        
+        # 关闭启动画面，显示主窗口
+        splash.accept()
+        window.show()
+        
+        # 运行应用
+        exit_code = app.exec()
+        
+        # 保存配置
+        config['blender_paths'] = blender_manager.blender_paths
+        write_json_file(args.config, config)
+        
+        # 保存使用时长数据
+        logger.info("保存使用时长统计数据")
+        blender_manager.usage_tracker.save_usage_data()
+        
+        # 压缩旧日志文件
+        log_manager.compress_old_logs()
+        
+        logger.info(f"Vortex-Launcher GUI 退出，退出码: {exit_code}")
+        return exit_code
 
 
 if __name__ == "__main__":

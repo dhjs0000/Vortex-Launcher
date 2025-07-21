@@ -14,6 +14,8 @@ if src.__channel__ != "Release":
 else:
     Suffix = ""
 
+# 应用名称
+app_name = f"Vortex Luncher{Suffix}"
 
 def package_app(target_os=None):
     """
@@ -74,8 +76,7 @@ def package_app(target_os=None):
     # 根据目标系统设置图标和其他特定参数，使用绝对路径
     icon_path = os.path.join(current_dir, "webside", "images", "2.0logo.ico") if target_os == "windows" else os.path.join(current_dir, "webside", "images", "logo.png")
     
-    # 应用名称
-    app_name = f"Vortex Luncher{Suffix}"
+    
     
     # 特定于操作系统的参数
     os_specific_args = []

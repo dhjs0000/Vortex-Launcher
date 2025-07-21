@@ -19,3 +19,13 @@ __date__ = '2025-07-21'
 __author__ = 'dhjs0000'
 __email__ = 'dhjsIIII@foxmail.com'
 __license__ = 'GPL-3.0' 
+
+# 导出模块
+from . import blender_manager
+from . import download_manager
+from . import backup_manager
+from . import log
+from . import ui
+from . import utils
+from . import cli
+from . import usage_tracker

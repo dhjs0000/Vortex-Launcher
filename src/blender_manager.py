@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import logging
 import threading
+from .usage_tracker import UsageTracker
 
 
 class BlenderManager:
@@ -24,6 +25,15 @@ class BlenderManager:
         self.config = config or {}
         self.blender_paths = self.config.get('blender_paths', [])
         self.logger = logger or logging.getLogger("BlenderManager")
+        
+        # 创建使用时长记录器
+        usage_logger = None
+        if logger:
+            if hasattr(logger, 'parent') and hasattr(logger.parent, 'get_logger'):
+                usage_logger = logger.parent.get_logger("UsageTracker", "vortex")
+            else:
+                usage_logger = logging.getLogger("UsageTracker")
+        self.usage_tracker = UsageTracker(config, usage_logger)
     
     
     def get_blender_version(self, blender_path):
@@ -198,6 +208,10 @@ class BlenderManager:
                 # 启动进程
                 self.logger.info(f"启动Blender: {' '.join(cmd)}")
                 
+                # 获取Blender版本信息用于记录使用时长
+                blender_info = self.get_blender_info(index)
+                version = blender_info.get('version', '未知') if blender_info else '未知'
+                
                 # 使用不同方式启动Blender
                 if capture_output:
                     # 捕获标准输出和标准错误
@@ -219,6 +233,9 @@ class BlenderManager:
                     self._processes[index] = process
                     
                     self.logger.info(f"已创建进程，PID: {process.pid}")
+                    
+                    # 开始记录使用时长
+                    self.usage_tracker.start_session(index, version)
                     
                     # 使用子线程读取输出
                     thread = threading.Thread(
@@ -245,6 +262,9 @@ class BlenderManager:
                     self._processes[index] = process
                     
                     self.logger.info(f"已创建进程，PID: {process.pid}")
+                    
+                    # 开始记录使用时长
+                    self.usage_tracker.start_session(index, version)
                 
                 return True, "成功启动Blender"
             else:
@@ -263,15 +283,31 @@ class BlenderManager:
         Returns:
             subprocess.Popen: 进程对象，如果不存在则返回None
         """
-        if hasattr(self, '_processes') and index in self._processes:
-            process = self._processes[index]
-            # 检查进程是否仍在运行
-            if process.poll() is None:
-                return process
-            else:
-                # 进程已结束，清理
-                del self._processes[index]
-        return None
+        try:
+            if hasattr(self, '_processes') and index in self._processes:
+                process = self._processes[index]
+                
+                # 检查进程是否仍在运行
+                if process and process.poll() is None:
+                    # 进程仍在运行
+                    return process
+                else:
+                    # 进程已结束，清理
+                    self.logger.info(f"检测到进程已结束，索引: {index}, PID: {getattr(process, 'pid', 'unknown')}")
+                    
+                    # 确保记录使用时长
+                    try:
+                        self.usage_tracker.end_session(index)
+                    except Exception as e:
+                        self.logger.error(f"记录使用时长时出错: {str(e)}")
+                    
+                    # 删除进程引用
+                    del self._processes[index]
+            
+            return None
+        except Exception as e:
+            self.logger.error(f"获取进程状态时出错: {str(e)}")
+            return None
     
     def _run_with_output_capture(self, cmd, index):
         """在子线程中运行进程并捕获输出
@@ -389,6 +425,9 @@ class BlenderManager:
             # 清理进程引用
             if hasattr(self, '_processes') and index in self._processes:
                 del self._processes[index]
+                # 结束使用时长记录
+                self.usage_tracker.end_session(index)
+                self.logger.info(f"Blender进程已结束，索引: {index}")
             
         except Exception as e:
             self.logger.error(f"捕获Blender输出时出错: {str(e)}")

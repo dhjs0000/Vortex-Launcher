@@ -945,7 +945,16 @@ class DownloadDialog(QDialog):
         if major_version not in self.version_map:
             self.version_map[major_version] = []
         
-        self.version_map[major_version].append(version_info)
+        # 检查版本是否已存在，避免重复
+        version_already_exists = False
+        for existing_version in self.version_map[major_version]:
+            if existing_version.version == version_info.version:
+                version_already_exists = True
+                break
+                
+        # 只有当版本不存在时才添加
+        if not version_already_exists:
+            self.version_map[major_version].append(version_info)
         
         # 更新表格
         self._update_table_for_major_version(major_version)
@@ -966,10 +975,8 @@ class DownloadDialog(QDialog):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         
-        # 更新最终信息
-        self.download_label.setText(f"共找到 {len(versions)} 个可用版本")
-        
-        # 确保所有主版本都已添加到表格
+        # 确保已正确添加所有版本
+        # 由于版本可能已在add_version_info中添加，这里我们检查是否有遗漏的版本
         for version_info in versions:
             # 提取主版本号
             parts = version_info.version.split('.')
@@ -977,17 +984,39 @@ class DownloadDialog(QDialog):
                 major_version = f"{parts[0]}.{parts[1]}"
             else:
                 major_version = version_info.version
+            
+            # 检查是否已添加到版本映射
+            if major_version not in self.version_map:
+                self.version_map[major_version] = []
                 
-            # 检查此主版本是否已在表格中
-            found = False
-            for row in range(self.version_table.rowCount()):
-                if self.version_table.item(row, 0).text() == major_version:
-                    found = True
+            # 检查版本是否已添加到对应主版本的子版本列表中
+            version_exists = False
+            for existing in self.version_map[major_version]:
+                if existing.version == version_info.version:
+                    version_exists = True
                     break
             
-            # 如果未找到，添加此主版本
-            if not found:
-                self._update_table_for_major_version(major_version)
+            # 如果版本不存在，添加它
+            if not version_exists:
+                self.version_map[major_version].append(version_info)
+        
+        # 更新最终信息
+        total_versions = sum(len(subversions) for subversions in self.version_map.values())
+        self.download_label.setText(f"共找到 {total_versions} 个可用版本")
+        
+        # 重新创建整个表格
+        self.version_table.setRowCount(0)
+        
+        # 对主版本号排序
+        major_versions = sorted(
+            list(self.version_map.keys()),
+            key=lambda v: [int(n) if n.isdigit() else 0 for n in v.split('.')],
+            reverse=True
+        )
+        
+        # 为每个主版本创建表格行
+        for major_version in major_versions:
+            self._update_table_for_major_version(major_version)
     
     def _update_table_for_major_version(self, major_version):
         """更新指定主版本的表格行"""
@@ -1027,21 +1056,16 @@ class DownloadDialog(QDialog):
             from PyQt6.QtWidgets import QComboBox
             combo = QComboBox()
             
-            # 添加所有子版本
+            # 添加所有子版本，显示完整版本号而不只是子版本号
             for idx, v in enumerate(versions_in_major):
-                # 提取子版本号部分
-                if len(v.version.split('.')) > 2:
-                    # 如果是3段版本号 (如 "3.6.1")，显示第三段
-                    subversion = v.version.split('.')[-1]
-                    display_text = subversion
-                else:
-                    # 如果只有2段版本号 (如 "3.6")，显示为"最新"
-                    display_text = "最新"
+                # 显示完整的版本号
+                display_text = v.version
                 
-                # 如果是该主版本的第一个子版本，默认选中
+                # 如果是该主版本的第一个子版本，标记为最新
                 if idx == 0:
                     display_text += " (最新)"
                 
+                # 将完整版本保存为用户数据，这样更容易找到对应的版本信息
                 combo.addItem(display_text, v.version)
             
             # 连接下拉框的信号
@@ -1077,8 +1101,10 @@ class DownloadDialog(QDialog):
             selected_version = combo.currentData()
             
             # 查找对应的版本信息
+            found_version_info = None
             for version_info in self.version_map[major_version]:
                 if version_info.version == selected_version:
+                    found_version_info = version_info
                     # 更新显示的版本信息
                     self.version_table.setItem(row, 2, QTableWidgetItem(version_info.build_date or ""))
                     self.version_table.setItem(row, 3, QTableWidgetItem(version_info.size or "未知"))
@@ -1087,6 +1113,24 @@ class DownloadDialog(QDialog):
                     # 更新版本更新说明
                     self.update_changes_text(version_info)
                     break
+            
+            # 确保找到了对应的版本信息
+            if not found_version_info:
+                # 记录错误
+                print(f"错误: 在主版本 {major_version} 下未找到版本 {selected_version} 的信息")
+                
+                # 尝试获取第一个版本作为回退
+                if self.version_map[major_version]:
+                    fallback_version = self.version_map[major_version][0]
+                    self.version_table.setItem(row, 2, QTableWidgetItem(fallback_version.build_date or ""))
+                    self.version_table.setItem(row, 3, QTableWidgetItem(fallback_version.size or "未知"))
+                    self.version_table.setItem(row, 4, QTableWidgetItem(fallback_version.description or ""))
+                    
+                    # 更新版本更新说明
+                    self.update_changes_text(fallback_version)
+        
+        # 强制更新表格，确保数据显示正确
+        self.version_table.viewport().update()
     
     def on_version_selected(self, row, combo):
         """下拉框选择变化事件"""
@@ -1098,8 +1142,10 @@ class DownloadDialog(QDialog):
             selected_version = combo.currentData()
             
             # 查找对应的版本信息
+            found_version_info = None
             for version_info in self.version_map[major_version]:
                 if version_info.version == selected_version:
+                    found_version_info = version_info
                     # 更新显示的版本信息
                     self.version_table.setItem(row, 2, QTableWidgetItem(version_info.build_date or ""))
                     self.version_table.setItem(row, 3, QTableWidgetItem(version_info.size or "未知"))
@@ -1108,6 +1154,24 @@ class DownloadDialog(QDialog):
                     # 更新版本更新说明
                     self.update_changes_text(version_info)
                     break
+            
+            # 确保找到了对应的版本信息
+            if not found_version_info:
+                # 记录错误
+                print(f"错误: 在主版本 {major_version} 下未找到版本 {selected_version} 的信息")
+                
+                # 尝试获取第一个版本作为回退
+                if self.version_map[major_version]:
+                    fallback_version = self.version_map[major_version][0]
+                    self.version_table.setItem(row, 2, QTableWidgetItem(fallback_version.build_date or ""))
+                    self.version_table.setItem(row, 3, QTableWidgetItem(fallback_version.size or "未知"))
+                    self.version_table.setItem(row, 4, QTableWidgetItem(fallback_version.description or ""))
+                    
+                    # 更新版本更新说明
+                    self.update_changes_text(fallback_version)
+        
+        # 强制更新表格，确保数据显示正确
+        self.version_table.viewport().update()
     
     def update_changes_text(self, version_info):
         """更新版本更新说明文本框"""
@@ -1176,6 +1240,11 @@ class DownloadDialog(QDialog):
                 for version_info in self.version_map[major_version]:
                     if version_info.version == selected_version:
                         return version_info
+                
+                # 如果未找到对应版本但有其他版本，返回第一个版本
+                if self.version_map[major_version]:
+                    print(f"警告: 未找到选择的版本 {selected_version}，使用第一个可用版本代替")
+                    return self.version_map[major_version][0]
         
         return None
         

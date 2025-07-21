@@ -54,17 +54,46 @@ class VersionLoaderThread(QThread):
             if self.is_canceled:
                 return
                 
-            # 发送版本信息
+            # 对版本进行分组，确保同一主版本的不同子版本都被加载
+            version_groups = {}
             for version_info in versions:
-                self.versions.append(version_info)
-                self.version_info_signal.emit(version_info)
-                
-                # 模拟加载延迟，使界面更流畅
-                import time
-                time.sleep(0.01)
-                
-                if self.is_canceled:
-                    return
+                # 提取主版本号
+                parts = version_info.version.split('.')
+                if len(parts) >= 2:
+                    major_version = f"{parts[0]}.{parts[1]}"
+                else:
+                    major_version = version_info.version
+                    
+                if major_version not in version_groups:
+                    version_groups[major_version] = []
+                version_groups[major_version].append(version_info)
+            
+            # 对每个主版本组内的子版本排序
+            for major_version, subversions in version_groups.items():
+                subversions.sort(
+                    key=lambda v: [int(n) if n.isdigit() else 0 for n in v.version.split('.')],
+                    reverse=True
+                )
+            
+            # 按照主版本号对组排序
+            sorted_major_versions = sorted(
+                version_groups.keys(),
+                key=lambda v: [int(n) if n.isdigit() else 0 for n in v.split('.')],
+                reverse=True
+            )
+            
+            # 发送按主版本和子版本排序后的版本信息
+            for major_version in sorted_major_versions:
+                for version_info in version_groups[major_version]:
+                    self.versions.append(version_info)
+                    self.version_info_signal.emit(version_info)
+                    
+                    # 模拟加载延迟，使界面更流畅
+                    import time
+                    time.sleep(0.01)
+                    
+                    if self.is_canceled:
+                        return
             
             # 如果没有获取到任何版本，尝试使用缓存
             if not self.versions and self.download_manager.version_cache:

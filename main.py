@@ -136,7 +136,7 @@ def main():
     
     # 保存主题设置到配置
     config['theme'] = args.theme
-
+    
     # 命令行模式
     if args.cli:
         logger.info("以命令行模式运行")

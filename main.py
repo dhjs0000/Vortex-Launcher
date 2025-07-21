@@ -63,12 +63,24 @@ def parse_arguments():
     Returns:
         argparse.Namespace: 解析后的参数
     """
+    # 尝试加载配置文件获取默认主题
+    default_theme = None
+    try:
+        import json
+        with open('config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            default_theme = config.get('theme', None)
+    except:
+        pass
+
     parser = argparse.ArgumentParser(description="Vortex-Launcher - Blender版本管理器")
     parser.add_argument('--config', '-c', help='配置文件路径', default='config.json')
     parser.add_argument('--log-level', '-l', 
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         help='日志级别', default='INFO')
     parser.add_argument('--version', '-v', action='version', version=f'Vortex-Launcher {src.__version__}')
+    parser.add_argument('--theme', '-t', 
+                        help='界面主题样式', default=default_theme)
     
     # CLI 模式相关参数
     parser.add_argument('--cli', action='store_true', help='以命令行模式运行，不启动图形界面')
@@ -122,6 +134,9 @@ def main():
     logger = log_manager.get_logger("VortexLauncher", "vortex")
     logger.info("Vortex-Launcher 启动")
     
+    # 保存主题设置到配置
+    config['theme'] = args.theme
+
     # 命令行模式
     if args.cli:
         logger.info("以命令行模式运行")
@@ -164,6 +179,106 @@ def main():
         app = QApplication(sys.argv)
         app.setApplicationName("Vortex-Launcher")
         app.setApplicationVersion(src.__version__)
+        
+        # 应用用户选择的主题
+        if args.theme:
+            logger.info(f"应用主题样式: {args.theme}")
+            try:
+                # 尝试加载qt_material主题
+                try:
+                    # qt_material主要支持PyQt5和PySide2，需要处理兼容性
+                    import importlib.util
+                    if importlib.util.find_spec("qt_material") is not None:
+                        # 为了与PyQt6兼容，我们需要进行一些设置
+                        import os
+                        os.environ['QT_API'] = 'pyqt6'
+                        
+                        from qt_material import apply_stylesheet
+                        
+                        # qt_material库的主题前缀
+                        if args.theme.startswith('dark_') or args.theme.startswith('light_'):
+                            # 使用qt_material主题
+                            try:
+                                logger.info(f"尝试应用qt_material主题: {args.theme}")
+                                # 添加额外的样式调整
+                                extra = {
+                                    # 修复在PyQt6下可能的样式问题
+                                    'density_scale': '-1',
+                                }
+                                apply_stylesheet(app, theme=args.theme, extra=extra)
+                                logger.info(f"成功应用qt_material主题: {args.theme}")
+                                
+                                # 如果样式应用成功，可以在这里添加一些额外的样式调整
+                                app.setStyle('Fusion')  # 基础样式使用Fusion，更兼容Material设计
+                            except Exception as e:
+                                logger.error(f"应用qt_material主题失败: {str(e)}")
+                                # 失败时尝试直接使用系统主题
+                                app.setStyle('Fusion')
+                        elif args.theme == 'Dark':
+                            try:
+                                with open('dark.qss', 'r', encoding='utf-8') as f:
+                                    dark_style = f.read()
+                                    app.setStyleSheet(dark_style)
+                                    logger.info("应用暗色样式表成功")
+                            except Exception as e:
+                                logger.error(f"加载暗色样式表失败: {str(e)}")
+                                app.setStyle('Fusion')  # 失败时回退到Fusion
+                        elif args.theme in ['Fusion', 'Windows', 'WindowsVista', 'Breeze']:
+                            # 使用系统主题
+                            app.setStyle(args.theme) 
+                            logger.info(f"应用系统主题: {args.theme}")
+                        else:
+                            # 未知主题，使用Fusion
+                            logger.warning(f"未知主题类型: {args.theme}，使用默认Fusion主题")
+                            app.setStyle('Fusion')
+                    else:
+                        logger.warning("未安装qt_material库或无法导入")
+                        # 尝试应用系统主题
+                        if args.theme == 'Dark':
+                            try:
+                                with open('dark.qss', 'r', encoding='utf-8') as f:
+                                    dark_style = f.read()
+                                    app.setStyleSheet(dark_style)
+                                    logger.info("应用暗色样式表成功")
+                            except Exception as e:
+                                logger.error(f"加载暗色样式表失败: {str(e)}")
+                                app.setStyle('Fusion')
+                        else:
+                            try:
+                                app.setStyle(args.theme)
+                                logger.info(f"应用系统主题: {args.theme}")
+                            except Exception as e:
+                                logger.error(f"应用系统主题失败: {str(e)}")
+                                app.setStyle('Fusion')
+                except ImportError as e:
+                    logger.warning(f"导入qt_material库失败: {str(e)}")
+                    # 尝试应用系统主题
+                    if args.theme == 'Dark':
+                        try:
+                            with open('dark.qss', 'r', encoding='utf-8') as f:
+                                dark_style = f.read()
+                                app.setStyleSheet(dark_style)
+                                logger.info("应用暗色样式表成功")
+                        except Exception as e:
+                            logger.error(f"加载暗色样式表失败: {str(e)}")
+                            app.setStyle('Fusion')
+                    else:
+                        try:
+                            app.setStyle(args.theme)
+                            logger.info(f"应用系统主题: {args.theme}")
+                        except Exception as e:
+                            logger.error(f"应用系统主题失败: {str(e)}")
+                            app.setStyle('Fusion')
+            except Exception as e:
+                logger.error(f"应用主题失败: {str(e)}")
+                # 出错时使用Fusion主题作为后备
+                try:
+                    app.setStyle('Fusion')
+                    logger.info("已回退到Fusion主题")
+                except:
+                    logger.critical("无法应用任何主题")
+        else:
+            logger.info("未指定主题，使用默认主题")
         
         # 显示启动界面
         from src.ui import LaunchingDialog

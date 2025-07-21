@@ -14,7 +14,7 @@ Vortex-Launcher src 包
 包含Blender版本管理器的各个模块
 """
 __channel__ = 'PublicDev'
-__version__ = f'({__channel__})Beta 1.3.0-b2(Src25-07-21)'
+__version__ = f'({__channel__})Beta 1.3.0-b3(Src25-07-21)'
 __date__ = '2025-07-21'
 __author__ = 'dhjs0000'
 __email__ = 'dhjsIIII@foxmail.com'

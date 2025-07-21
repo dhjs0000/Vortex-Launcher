@@ -18,7 +18,8 @@ from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QMenu, QMenuBar, QDialog, QCheckBox,
     QLineEdit, QGridLayout, QTabWidget, QTextEdit,
-    QSpinBox, QProgressBar, QGroupBox, QDialogButtonBox
+    QSpinBox, QProgressBar, QGroupBox, QDialogButtonBox,
+    QComboBox
 )
 from PyQt6.QtGui import QAction, QCursor, QIcon
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, QTimer, QDateTime
@@ -257,8 +258,81 @@ class SettingsDialog(QDialog):
         self.quick_launch = QCheckBox("启用快速启动模式（双击栏目启动Blender）")
         self.quick_launch.setChecked(config.get('quick_launch', False))
         
+        # 界面主题设置
+        theme_layout = QHBoxLayout()
+        theme_layout.addWidget(QLabel("界面主题:"))
+        self.theme_combo = QComboBox()
+        
+        # 添加系统主题
+        system_themes = ['无主题', 'Fusion', 'Windows', 'WindowsVista', 'Breeze', 'Dark']
+        self.theme_combo.addItems(system_themes)
+        
+        # 添加qt_material主题
+        material_themes = [
+            '暗色主题 - dark_amber',
+            '暗色主题 - dark_blue',
+            '暗色主题 - dark_cyan', 
+            '暗色主题 - dark_lightgreen',
+            '暗色主题 - dark_pink',
+            '暗色主题 - dark_purple',
+            '暗色主题 - dark_red',
+            '暗色主题 - dark_teal',
+            '暗色主题 - dark_yellow',
+            '亮色主题 - light_amber',
+            '亮色主题 - light_blue',
+            '亮色主题 - light_cyan',
+            '亮色主题 - light_cyan_500',
+            '亮色主题 - light_lightgreen',
+            '亮色主题 - light_pink',
+            '亮色主题 - light_purple',
+            '亮色主题 - light_red',
+            '亮色主题 - light_teal',
+            '亮色主题 - light_yellow'
+        ]
+        
+        for theme in material_themes:
+            self.theme_combo.addItem(theme)
+            
+        # 设置当前主题
+        current_theme = config.get('theme', '无主题')
+        
+        # 查找匹配的主题名称
+        theme_found = False
+        for i in range(self.theme_combo.count()):
+            theme_text = self.theme_combo.itemText(i)
+            # 对于qt_material主题，提取实际名称
+            if ' - ' in theme_text:
+                theme_name = theme_text.split(' - ')[1]
+                if theme_name == current_theme:
+                    self.theme_combo.setCurrentIndex(i)
+                    theme_found = True
+                    break
+            elif theme_text == current_theme:
+                self.theme_combo.setCurrentIndex(i)
+                theme_found = True
+                break
+        
+        # 如果未找到匹配的主题，默认设置为"无主题"
+        if not theme_found:
+            self.theme_combo.setCurrentText('无主题')
+            
+        theme_layout.addWidget(self.theme_combo)
+        theme_layout.addStretch()
+        
+        # 添加主题使用说明
+        theme_note = QLabel(
+            "注意：Material风格主题需要安装qt-material库 (pip install qt-material)。\n"
+            "由于qt-material主要为PyQt5/PySide2设计，在PyQt6下可能存在兼容性问题。\n"
+            "如果主题不生效，请尝试重启程序或选择其他主题。\n"
+            "主题更改将在应用重启后生效。"
+        )
+        theme_note.setWordWrap(True)
+        theme_note.setStyleSheet("color: #666666; font-size: 8pt;")
+        
         # 添加到编辑布局
         edit_layout.addWidget(self.quick_launch)
+        edit_layout.addLayout(theme_layout)
+        edit_layout.addWidget(theme_note)
         edit_layout.addStretch()
         
         # 下载选项卡
@@ -383,6 +457,17 @@ class SettingsDialog(QDialog):
         
         # 编辑设置
         self.config['quick_launch'] = self.quick_launch.isChecked()
+        
+        # 主题设置，处理qt_material主题名称
+        selected_theme = self.theme_combo.currentText()
+        if selected_theme == '无主题':
+            self.config['theme'] = None
+        elif ' - ' in selected_theme:
+            # 提取qt_material主题实际名称
+            theme_name = selected_theme.split(' - ')[1]
+            self.config['theme'] = theme_name
+        else:
+            self.config['theme'] = selected_theme
         
         # 下载设置
         self.config['download_dir'] = self.download_dir.text()
@@ -553,6 +638,12 @@ class UsageStatsDialog(QDialog):
             warning_text.setStyleSheet("color: #B71C1C; margin-top: 10px;")
             warning_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
             verification_layout.addWidget(warning_text)
+            
+        # 添加"为什么要校验"按钮
+        why_verify_button = QPushButton("为什么要校验")
+        why_verify_button.clicked.connect(self.show_verification_explanation)
+        verification_layout.addSpacing(10)
+        verification_layout.addWidget(why_verify_button, 0, Qt.AlignmentFlag.AlignCenter)
         
         verification_layout.addStretch()
         verification_box.setLayout(verification_layout)
@@ -593,6 +684,51 @@ class UsageStatsDialog(QDialog):
         new_dialog = UsageStatsDialog(self.usage_tracker, self.parent())
         self.accept()
         new_dialog.exec()
+        
+    def show_verification_explanation(self):
+        """显示数据校验说明对话框"""
+        from PyQt6.QtWidgets import QMessageBox
+        
+        explanation = QMessageBox(self)
+        explanation.setWindowTitle("为什么需要数据校验")
+        explanation.setIcon(QMessageBox.Icon.Information)
+        explanation.setText("<h3>为什么需要对使用时长数据进行校验？</h3>")
+        
+        detailed_text = """
+数据校验的目的是确保使用时长统计数据的完整性和可靠性。通过校验机制，我们可以：
+
+1. 防止数据被意外或恶意篡改：使用加密哈希技术生成校验码，任何对数据的修改都会导致校验失败。
+
+2. 确保数据来源可靠：校验码与系统硬件绑定，确保数据只能在原始系统上验证通过，防止伪造数据。
+
+3. 保护统计的准确性：使用时长统计是评估软件使用情况的重要指标，校验可以确保这些数据的可信度。
+
+4. 维护使用记录的完整性：对于某些需要根据使用时间计费或分析的场景，数据完整性尤为重要。
+
+校验过程完全在本地进行，不会将任何数据发送到外部服务器，保护您的隐私。
+
+当校验失败（红灯）时，这可能表明数据文件已被修改，或者您正在不同的计算机上查看这些数据。
+
+我们对您的数据进行校验需要获取一下数据：
+
+计算机网络名称,
+机器类别,
+处理器名称,
+操作系统名称,
+MAC地址,
+操作系统名称,
+操作系统版本,
+用户名,
+处理器类型
+
+请注意，校验算法在初次添加后不再更改，因此，您可以放心不会出现因算法更新导致的失效。
+"""
+        
+        explanation.setInformativeText(detailed_text)
+        explanation.setStandardButtons(QMessageBox.StandardButton.Ok)
+        explanation.setDefaultButton(QMessageBox.StandardButton.Ok)
+        
+        explanation.exec()
 
 
 class ConfigFileDialog(QDialog):
@@ -1625,8 +1761,6 @@ class MainWindow(QMainWindow):
         launch_blender_action.triggered.connect(self.launch_blender)
         download_blender_action.triggered.connect(self.show_download_dialog)
         
-        about_action.triggered.connect(self.show_about)
-
         tools_menu = menubar.addMenu("工具")
 
         backup_manager_action = QAction("备份管理器", self)
@@ -1644,15 +1778,31 @@ class MainWindow(QMainWindow):
         about_action = QAction("关于", self)
         
         help_menu.addAction(about_action)
+        
+        about_action.triggered.connect(self.show_about)
 
     def show_settings(self):
         """显示设置对话框"""
+        # 保存原始主题设置，用于比较是否有变化
+        old_theme = self.config.get('theme')
+        
         dialog = SettingsDialog(self.config, self)
         if dialog.exec():
             # 更新配置
             self.config['auto_detect'] = dialog.auto_detect.isChecked()
             self.config['auto_detect_path'] = dialog.auto_detect_path.text()
             self.config['quick_launch'] = dialog.quick_launch.isChecked()
+            
+            # 主题设置，处理qt_material主题名称
+            selected_theme = dialog.theme_combo.currentText()
+            if selected_theme == '无主题':
+                self.config['theme'] = None
+            elif ' - ' in selected_theme:
+                # 提取qt_material主题实际名称
+                theme_name = selected_theme.split(' - ')[1]
+                self.config['theme'] = theme_name
+            else:
+                self.config['theme'] = selected_theme
             
             # 更新下载配置
             self.config['download_dir'] = dialog.download_dir.text()
@@ -1666,11 +1816,26 @@ class MainWindow(QMainWindow):
             # 更新下载管理器配置
             self.download_manager.update_config(self.config)
             
+            # 如果主题发生变化，提示用户重启应用
+            new_theme = self.config.get('theme')
+            if old_theme != new_theme:
+                QMessageBox.information(self, "主题已更改", "主题更改将在应用重启后生效")
+                
             # 如果启用自动检测，则执行自动检测
             if self.config.get('auto_detect', False):
                 self.logger.info("执行自动检测...")
                 self.blender_manager.auto_detect_blender(self.config.get('auto_detect_path'))
                 self.update_version_table()
+                
+            # 立即保存配置文件，确保设置被保存
+            import json
+            try:
+                with open("config.json", 'w', encoding='utf-8') as f:
+                    json.dump(self.config, f, ensure_ascii=False, indent=4)
+                self.logger.info("配置文件已保存")
+            except Exception as e:
+                self.logger.error(f"保存配置时出错: {str(e)}")
+                QMessageBox.warning(self, "警告", f"保存配置时出错: {str(e)}")
 
     def show_config_file(self):
         """显示配置文件对话框"""

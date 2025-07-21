@@ -102,12 +102,12 @@ class UsageTracker:
         
         # 系统相关信息，创建一个与系统绑定的唯一密钥
         system_info = [
-            platform.system(),
-            platform.release(),
-            platform.machine(),
+            platform.system(),  # 操作系统名称
+            platform.release(),  # 操作系统版本
+            platform.machine(),  # 机器类型
             getpass.getuser(),  # 用户名
             str(uuid.getnode()),  # MAC地址的整数表示
-            platform.processor()
+            platform.processor()  # 处理器类型
         ]
         
         # 组合信息

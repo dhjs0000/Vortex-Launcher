@@ -13,6 +13,9 @@
 Vortex-Launcher src 包
 包含Blender版本管理器的各个模块
 """
+import os
+os.environ['QT_DEBUG_PLUGINS'] = '1'  # 启用Qt插件调试
+
 __channel__ = 'PublicDev'
 __version__ = f'({__channel__})Beta 1.3.0-b3(Src25-07-21)'
 __date__ = '2025-07-21'

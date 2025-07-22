@@ -57,6 +57,39 @@ from src.ui import MainWindow
 from src.utils import read_json_file, write_json_file, ensure_directory
 import src
 
+# 设置Qt插件路径
+if hasattr(sys, '_MEIPASS'):
+    qt_plugins_path = os.path.join(sys._MEIPASS, 'qt-plugins')
+else:
+    qt_plugins_path = os.path.join(os.path.dirname(__file__), 'qt-plugins')
+
+from PyQt6 import QtCore
+
+QtCore.QCoreApplication.addLibraryPath(qt_plugins_path)
+
+
+import sys
+import os
+from PyQt6 import QtCore, QtWidgets
+
+# 设置Qt环境变量
+if hasattr(sys, '_MEIPASS'):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.abspath(".")
+
+os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(base_path, "platforms")
+os.environ["QT_PLUGIN_PATH"] = os.path.join(base_path, "plugins")
+
+# 检查环境是否正常
+try:
+    QtWidgets.QApplication([])
+except Exception as e:
+    error_msg = f"初始化失败: {str(e)}\n\n请确保已安装Visual C++ 2015-2022 Redistributable"
+    QtWidgets.QMessageBox.critical(None, "启动错误", error_msg)
+    sys.exit(1)
+
+
 def parse_arguments():
     """解析命令行参数
     
@@ -335,4 +368,16 @@ def main():
 
 
 if __name__ == "__main__":
+    # 设置Qt插件路径
+    if hasattr(sys, '_MEIPASS'):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    
+    plugin_path = os.path.join(base_path, "plugins")
+    QtCore.QCoreApplication.addLibraryPath(plugin_path)
+    
+    # 检查插件是否加载成功
+    print("可用Qt插件路径:", QtCore.QCoreApplication.libraryPaths())
+    
     sys.exit(main()) 

@@ -1,10 +1,11 @@
 import os
 import shutil
 import subprocess
-from datetime import datetime
-import re
 import sys
 import platform
+import time
+import threading
+from datetime import datetime
 import src
 
 Suffix = None
@@ -17,13 +18,44 @@ else:
 # 应用名称
 app_name = f"Vortex Luncher{Suffix}"
 
-def package_app(target_os=None):
-    """
-    打包应用程序
+# 进度动画类
+class ProgressIndicator:
+    def __init__(self, desc="构建中"):
+        self.desc = desc
+        self.running = False
+        self.spinner = ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷']
+        self.thread = None
+        self.counter = 0
+        self.start_time = None
     
-    Args:
-        target_os: 目标操作系统，可以是 'windows', 'macos', 'linux' 或 None (当前系统)
-    """
+    def spin(self):
+        self.start_time = time.time()
+        while self.running:
+            elapsed = time.time() - self.start_time
+            mins, secs = divmod(int(elapsed), 60)
+            hours, mins = divmod(mins, 60)
+            timeformat = f"{hours:02d}:{mins:02d}:{secs:02d}"
+            
+            sys.stdout.write(f"\r{self.desc} {self.spinner[self.counter % len(self.spinner)]} [{timeformat}]")
+            sys.stdout.flush()
+            self.counter += 1
+            time.sleep(0.1)
+    
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self.spin)
+        self.thread.daemon = True
+        self.thread.start()
+    
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join()
+        sys.stdout.write("\r" + " " * 80 + "\r")  # 清除进度指示器
+        sys.stdout.flush()
+
+def package_app(target_os=None):
+    """打包应用程序"""
     # 检测当前操作系统
     current_os = platform.system().lower()
     if current_os == "darwin":
@@ -66,7 +98,18 @@ def package_app(target_os=None):
     # 复制thirdparty到目标目录
     thirdparty_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "thirdparty")
     if os.path.exists(thirdparty_dir):
-        shutil.copytree(thirdparty_dir, os.path.join(f"output_dir\\{current_os}\\{app_name}", "licenses"))
+        target_licenses = os.path.join(f"{output_dir}\\{current_os}\\{app_name}", "licenses")
+        os.makedirs(target_licenses, exist_ok=True)
+        try:
+            for item in os.listdir(thirdparty_dir):
+                src_path = os.path.join(thirdparty_dir, item)
+                dst_path = os.path.join(target_licenses, item)
+                if os.path.isdir(src_path):
+                    shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(src_path, dst_path)
+        except Exception as e:
+            print(f"复制thirdparty时出错: {str(e)}")
     else:
         print("警告: 未找到thirdparty目录，跳过复制thirdparty步骤。")
     
@@ -75,8 +118,6 @@ def package_app(target_os=None):
     
     # 根据目标系统设置图标和其他特定参数，使用绝对路径
     icon_path = os.path.join(current_dir, "webside", "images", "2.0logo.ico") if target_os == "windows" else os.path.join(current_dir, "webside", "images", "logo.png")
-    
-    
     
     # 特定于操作系统的参数
     os_specific_args = []
@@ -99,34 +140,89 @@ def package_app(target_os=None):
     # 基本PyInstaller命令
     cmd = [
         "pyinstaller",
-        "-D",  # 创建一个目录而不是单个文件
+        "-F",  # 创建单个文件
         "main.py",
         "-n", app_name,
         "--icon", icon_path,
         "--distpath", output_subdir,
         "--workpath", os.path.join(output_dir, f"temp_{target_os}"),
         "--specpath", output_dir,
-        "--hidden-import", "requests",
-        "--hidden-import", "bs4",
-        "--hidden-import", "psutil"
+        "--hidden-import", "PyQt6.QtCore",
+        "--hidden-import", "PyQt6.QtGui",
+        "--hidden-import", "PyQt6.QtWidgets",
+        "--collect-all", "PyQt6"
     ]
     
     # 添加特定于操作系统的参数
     cmd.extend(os_specific_args)
     
-    # 执行打包命令
+    # 执行打包命令，显示实时进度
     print(f"开始为 {target_os} 构建...")
-    result = subprocess.run(cmd, text=True)
+    print("这可能需要几分钟时间，请耐心等待...")
+    print("-" * 60)
     
-    # 输出构建日志
-    log_file = os.path.join(output_subdir, f"build_log_{target_os}.txt")
-    with open(log_file, "w", encoding="utf-8") as f:
-        f.write("=== STDOUT ===\n")
-        f.write(result.stdout or "")
-        f.write("\n=== STDERR ===\n")
-        f.write(result.stderr or "")
+    # 启动进度指示器
+    progress = ProgressIndicator(f"正在为 {target_os} 构建")
+    progress.start()
+    
+    try:
+        # 直接显示输出，不捕获
+        process = subprocess.run(cmd, check=True)
+        progress.stop()
+        print(f"PyInstaller构建完成！")
+    except subprocess.CalledProcessError as e:
+        progress.stop()
+        print(f"构建失败，错误码: {e.returncode}")
+        return None
+    except KeyboardInterrupt:
+        progress.stop()
+        print("\n构建被用户中断")
+        return None
+    finally:
+        progress.stop()
+    
+    print("-" * 60)
+    
+    # 复制DLL文件到输出目录
+    dlls_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dlls")
+    if os.path.exists(dlls_dir):
+        print("正在复制DLL文件...")
+        target_bin = os.path.join(output_subdir, app_name)
+        try:
+            for item in os.listdir(dlls_dir):
+                src_path = os.path.join(dlls_dir, item)
+                dst_path = os.path.join(target_bin, item)
+                if os.path.isfile(src_path):
+                    shutil.copy2(src_path, dst_path)
+        except Exception as e:
+            print(f"复制DLL文件时出错: {str(e)}")
+    
+    # 创建启动批处理文件
+    print("正在创建启动脚本...")
+    batch_content = """@echo off
+setlocal
+echo 正在检查运行环境...
+if not exist "%ProgramFiles(x86)%\\Microsoft Visual Studio\\Shared\\VC\\Tools\\MSVC" (
+    echo 未检测到Visual C++运行库，正在安装...
+    if exist "vcredist_x86.exe" (
+        start /wait vcredist_x86.exe /install /quiet /norestart
+    )
+    if exist "vcredist_x64.exe" (
+        start /wait vcredist_x64.exe /install /quiet /norestart
+    )
+) else (
+    echo Visual C++运行库已安装
+)
+echo 正在启动程序...
+start "" "%~dp0{0}.exe"
+endlocal
+""".format(app_name)
+    
+    with open(os.path.join(output_subdir, "启动.bat"), "w") as f:
+        f.write(batch_content)
     
     # 清理临时文件
+    print("正在清理临时文件...")
     temp_dir = os.path.join(output_dir, f"temp_{target_os}")
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
@@ -136,7 +232,7 @@ def package_app(target_os=None):
     if os.path.exists(spec_file):
         os.remove(spec_file)
     
-    print(f"{target_os} 构建完成，输出目录：{output_subdir}")
+    print(f"✅ {target_os} 构建完成，输出目录：{output_subdir}")
     return output_subdir
 
 
